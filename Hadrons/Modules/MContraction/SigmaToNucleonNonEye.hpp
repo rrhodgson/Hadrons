@@ -170,7 +170,7 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     LOG(Message) << " using sink " << par().sink << "." << std::endl;
         
     envGetTmp(SpinMatrixField, c);
-    std::vector<SpinMatrix> buf;
+    std::vector<SpinMatrix> buf(8);
     iSpinMatrix<Complex> tmp;
 
     std::vector<Result> result;
