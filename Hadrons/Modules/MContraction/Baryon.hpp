@@ -93,6 +93,7 @@ public:
     // dependency relation
     virtual std::vector<std::string> getInput(void);
     virtual std::vector<std::string> getOutput(void);
+    virtual std::vector<std::string> getOutputFiles(void);
     virtual void parseGammaString(std::vector<GammaABPair> &gammaList);
 protected:
     // setup
@@ -129,6 +130,13 @@ std::vector<std::string> TBaryon<FImpl>::getOutput(void)
     std::vector<std::string> out = {};
     
     return out;
+}
+template <typename FImpl>
+std::vector<std::string> TBaryon<FImpl>::getOutputFiles(void)
+{
+    std::vector<std::string> output = {resultFilename(par().output)};
+    
+    return output;
 }
 
 template <typename FImpl>
@@ -197,20 +205,22 @@ void TBaryon<FImpl>::setup(void)
 template <typename FImpl>
 void TBaryon<FImpl>::execute(void)
 {
-    assert(par().quarks.size()==3 && "quark-structure must consist of 3 quarks");
-
-    std::regex rex_shuffle("^(?:([1-3])(?!.*\\1)){3}$");
-    std::smatch sm;
-    std::regex_match(par().shuffle, sm, rex_shuffle);
-    assert(sm[0].matched && "shuffle parameter must be a permulation of 123");
-
-    std::string quarksR = par().quarks;
-    std::string quarksL = quarksR;
+    // Check shuffle is a permutation of "123"
+    assert(par().shuffle.size()==3 && "shuffle parameter must be 3 characters long");
+    std::string shuffle_tmp = par().shuffle;
+    std::sort(shuffle_tmp.begin(), shuffle_tmp.end());
+    assert(shuffle_tmp == "123" && "shuffle parameter must be a permulation of 123");
 
     std::vector<int> shuffle = { std::stoi( par().shuffle.substr(0,1) ) -1,
                                  std::stoi( par().shuffle.substr(1,1) ) -1,
                                  std::stoi( par().shuffle.substr(2,1) ) -1 };
 
+
+    assert(par().quarks.size()==3 && "quark-structure must consist of 3 quarks");
+    std::string quarksR = par().quarks;
+    std::string quarksL = quarksR;
+
+    // Shuffle quark flavours
     quarksL[0] = quarksR[shuffle[0]];
     quarksL[1] = quarksR[shuffle[1]];
     quarksL[2] = quarksR[shuffle[2]];
@@ -219,6 +229,8 @@ void TBaryon<FImpl>::execute(void)
     props[0] = par().q1;
     props[1] = par().q2;
     props[2] = par().q3;
+
+    // Shuffle propagators
     std::vector<std::string> propsL(props);
     propsL[0] = props[shuffle[0]];
     propsL[1] = props[shuffle[1]];
@@ -238,17 +250,15 @@ void TBaryon<FImpl>::execute(void)
     LOG(Message) << "  using quarksL (" << quarksL << ") with left propagators (" << propsL[0] << ", " << propsL[1] << ", and " << propsL[2] << ")" << std::endl;
     LOG(Message) << "  using quarksR (" << quarksR << ") ";
     if (par().sim_sink)
-        std::cout << "with simultaneous sink " << par().sinkq1 << std::endl;
+        LOG(Message) << "with simultaneous sink " << par().sinkq1 << std::endl;
     else 
-        std::cout << "with sinks (" << par().sinkq1 << ", " << par().sinkq2 << ", and " << par().sinkq3 << ")" << std::endl;
+        LOG(Message) << "with sinks (" << par().sinkq1 << ", " << par().sinkq2 << ", and " << par().sinkq3 << ")" << std::endl;
 
     for (int iG = 0; iG < gammaList.size(); iG++)
         LOG(Message) << "    with (Gamma^A,Gamma^B)_left = ( " << gammaList[iG].first.first << " , " << gammaList[iG].first.second << "') and (Gamma^A,Gamma^B)_right = ( " << gammaList[iG].second.first << " , " << gammaList[iG].second.second << ")" << std::endl;
     
     envGetTmp(LatticeComplex, c);
     int nt = env().getDim(Tp);
-    TComplex cs;
-    TComplex ch;
 
     std::vector<Result> result;
     Result              r;
@@ -257,14 +267,9 @@ void TBaryon<FImpl>::execute(void)
     r.info.quarksR  = quarksR;
     r.info.quarksL  = quarksL;
     r.info.shuffle = par().shuffle;
-
-    const int epsilon[6][3] = {{0,1,2},{1,2,0},{2,0,1},{0,2,1},{2,1,0},{1,0,2}};
         
     bool wick_contractions[6];
-    for (int ie=0; ie < 6 ; ie++) {
-        wick_contractions[ie] = (quarksL[0] == quarksR[epsilon[ie][0]] && quarksL[1] == quarksR[epsilon[ie][1]] && quarksL[2] == quarksR[epsilon[ie][2]]) ? 1 : 0;
-        LOG(Message) << "Contraction " << ie+1 << " : " << ( (wick_contractions[ie]) ? "true" : "false" )  << std::endl;
-    }
+    BaryonUtils<FIMPL>::Wick_Contractions(quarksL,quarksR,wick_contractions);
     
     PropagatorField &q1  = envGet(PropagatorField, propsL[0]);
     PropagatorField &q2  = envGet(PropagatorField, propsL[1]);
@@ -319,6 +324,8 @@ void TBaryon<FImpl>::execute(void)
             result.push_back(r);
         }
     } else {
+        const int epsilon[6][3] = {{0,1,2},{1,2,0},{2,0,1},{0,2,1},{2,1,0},{1,0,2}};
+
         SinkFn* sinkFn[3];
         sinkFn[0] = &envGet(SinkFn, par().sinkq1);
         sinkFn[1] = &envGet(SinkFn, par().sinkq2);
@@ -328,6 +335,7 @@ void TBaryon<FImpl>::execute(void)
         SlicedPropagator q2_slice[6];
         SlicedPropagator q3_slice[6];
 
+        // Compute all sinked propagators
         for (int ie=0; ie < 6 ; ie++) {
             q1_slice[ie] = (*sinkFn[epsilon[ie][0]])(q1);
             q2_slice[ie] = (*sinkFn[epsilon[ie][1]])(q2);
@@ -345,9 +353,14 @@ void TBaryon<FImpl>::execute(void)
 
             for (int ie=0; ie < 6 ; ie++) {
                 if (wick_contractions[ie]) {
+                    // Perform the current contraction only
+                    bool wc[6];
+                    for (int i=0; i<6; i++)
+                        wc[i] = (i == ie);
+
                     BaryonUtils<FIMPL>::ContractBaryons_Sliced( q1_slice[ie],q2_slice[ie],q3_slice[ie],
                                                                 gAl,gBl,gAr,gBr,
-                                                                ie,
+                                                                wc,
                                                                 par().parity,
                                                                 nt,
                                                                 buf);
