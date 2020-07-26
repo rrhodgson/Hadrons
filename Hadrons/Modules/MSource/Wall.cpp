@@ -30,4 +30,5 @@ using namespace Hadrons;
 using namespace MSource;
 
 template class Grid::Hadrons::MSource::TWall<FIMPL>;
+template class Grid::Hadrons::MSource::TWall<ScalarImplCR>;
 

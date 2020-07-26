@@ -66,7 +66,7 @@ template <typename FImpl>
 class TWall: public Module<WallPar>
 {
 public:
-    FERM_TYPE_ALIASES(FImpl,);
+    BASIC_TYPE_ALIASES(FImpl,);
 public:
     // constructor
     TWall(const std::string name);
@@ -86,6 +86,7 @@ private:
 };
 
 MODULE_REGISTER_TMP(Wall, TWall<FIMPL>, MSource);
+MODULE_REGISTER_TMP(ScalarWall, TWall<ScalarImplCR>, MSource);
 
 /******************************************************************************
  *                 TWall implementation                                       *

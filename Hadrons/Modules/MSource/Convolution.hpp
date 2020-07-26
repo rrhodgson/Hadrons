@@ -123,7 +123,7 @@ void TConvolution<FImpl>::execute(void)
     envGetTmp(FFT, fft);
 
     std::vector<int> mask(env().getNd(), 1);
-    mask.back()=0; //transform only the spatial dimensions
+    // mask.back()=0; //transform only the spatial dimensions
 
     startTimer("Fourier transform");
     fft.FFT_dim_mask(momfield, filter, mask, FFT::forward);
