@@ -55,7 +55,7 @@ class RandomPointPar: Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(RandomPointPar,
-                                    std::string, position);
+                                    std::string, time);
 };
 
 template <typename FImpl>
@@ -118,21 +118,34 @@ void TRandomPoint<FImpl>::setup(void)
 template <typename FImpl>
 void TRandomPoint<FImpl>::execute(void)
 {
-    LOG(Message) << "Creating Randompoint source at position [" << par().position
-                << "]" << std::endl;
+    LOG(Message) << "Creating random point source at time " << par().time << std::endl;
 
-    std::vector<int> position = strToVec<int>(par().position);
     auto             &src     = envGet(PropagatorField, getName());
     SitePropagator   id;
-    
-    if (position.size() != env().getNd())
-    {
-        HADRONS_ERROR(Size, "position has " + std::to_string(position.size())
-                      + " components (must have " + std::to_string(env().getNd()) + ")");
+
+    GridSerialRNG sRNG;
+    sRNG.SeedUniqueString( getName() + ":t"+par().time +":traj"+ std::to_string(vm().getTrajectory()) );
+
+    int dim=env().getNd()-1;
+
+    std::vector<int> position;
+
+    int  tmp;
+    for (int d=0; d<dim; d++) {
+        // sRNG.fill(tmp,sRNG._uid);
+        sRNG._uid[0].reset();
+        fillScalar(tmp,sRNG._uid[0],sRNG._generators[0]);
+        
+        position.push_back( abs(tmp) % env().getDim(d) );
     }
+    position.push_back( stoi(par().time) );
+    std::cout << position << std::endl;
+
     id  = 1.;
     src = Zero();
     pokeSite(id, src, position);
+
+    // std::cout << closure(trace(src)) << std::endl;
 }
 
 END_MODULE_NAMESPACE
