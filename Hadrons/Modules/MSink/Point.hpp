@@ -72,8 +72,12 @@ private:
     std::string momphName_;
 };
 
+
+typedef ScalarSpinMatrixImplTypes<vComplex,4> SpinMatImplCR;
+
 MODULE_REGISTER_TMP(Point,       TPoint<FIMPL>,        MSink);
 MODULE_REGISTER_TMP(ScalarPoint, TPoint<ScalarImplCR>, MSink);
+MODULE_REGISTER_TMP(SMatPoint,   TPoint<SpinMatImplCR>, MSink);
 
 /******************************************************************************
  *                          TPoint implementation                             *

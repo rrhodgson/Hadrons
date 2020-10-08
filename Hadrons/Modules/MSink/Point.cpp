@@ -29,6 +29,9 @@ using namespace Grid;
 using namespace Hadrons;
 using namespace MSink;
 
+typedef ScalarSpinMatrixImplTypes<vComplex,4> SpinMatImplCR;
+
 template class Grid::Hadrons::MSink::TPoint<FIMPL>;
 template class Grid::Hadrons::MSink::TPoint<ScalarImplCR>;
+template class Grid::Hadrons::MSink::TPoint<SpinMatImplCR>;
 
