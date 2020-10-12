@@ -62,6 +62,7 @@ public:
                                     std::string, sinkq3,
                                     bool, sim_sink,
                                     std::string, gammas,
+                                    bool, trace,
                                     int, parity,
                                     std::string, output);
 };
@@ -140,7 +141,12 @@ std::vector<std::string> TBaryonSpinMat<FImpl>::getOutput(void)
 template <typename FImpl>
 std::vector<std::string> TBaryonSpinMat<FImpl>::getOutputFiles(void)
 {
-    std::vector<std::string> output = {resultFilename(par().output)};
+    std::vector<std::string> output;
+
+    if (par().trace)
+        output.push_back( resultFilename(par().output) );
+    else 
+        output.push_back( resultFilename(par().output+"_Matrix") );
     
     return output;
 }
@@ -206,7 +212,6 @@ void TBaryonSpinMat<FImpl>::setup(void)
 {
     envTmpLat(LatticeComplex, "c");
     envTmpLat(SpinMatrixField, "cMat");
-    envTmpLat(SpinMatrixField, "test");
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -247,16 +252,22 @@ void TBaryonSpinMat<FImpl>::execute(void)
     if (par().sim_sink)
         assert(par().sinkq1==par().sinkq2 && par().sinkq2==par().sinkq3 && "when sim_sink is true all three sinks must be the same");
 
-    assert(par().parity == 1 || par().parity == -1 && "parity must be 1 or -1");
+    if (par().trace)
+        assert(par().parity == 1 || par().parity == -1 && "parity must be 1 or -1");
 
     std::vector<GammaABPair> gammaList;
     parseGammaString(gammaList);
 
 
     LOG(Message) << "Computing baryon contractions '" << getName() << "'" << std::endl;
-    LOG(Message) << "  using shuffle " << shuffle << " and parity " << par().parity << std::endl;
+    LOG(Message) << "  using shuffle " << shuffle << std::endl;
     LOG(Message) << "  using quarksL (" << quarksL << ") with left propagators (" << propsL[0] << ", " << propsL[1] << ", and " << propsL[2] << ")" << std::endl;
-    LOG(Message) << "  using quarksR (" << quarksR << ") ";
+    LOG(Message) << "  using quarksR (" << quarksR << ") " << std::endl;
+    if (par().trace)
+        LOG(Message) << "  and parity " << par().parity << std::endl;
+    else
+        LOG(Message) << "  with no parity projection or trace" << std::endl;
+
     if (par().sim_sink)
         LOG(Message) << "with simultaneous sink " << par().sinkq1 << std::endl;
     else 
@@ -269,40 +280,39 @@ void TBaryonSpinMat<FImpl>::execute(void)
     envGetTmp(SpinMatrixField, cMat);
     int nt = env().getDim(Tp);
 
-    std::vector<ResultMat> resultMat;
-    ResultMat              rMat;
-    std::vector<Result> result;
-    Result              r;
-    r.info.parity  = par().parity;
 
-    r.info.quarksR  = quarksR;
-    r.info.quarksL  = quarksL;
-    r.info.shuffle = par().shuffle;
-
-    rMat.info.parity  = 0;
-
-    rMat.info.quarksR  = quarksR;
-    rMat.info.quarksL  = quarksL;
-    rMat.info.shuffle = par().shuffle;
-        
     bool wick_contractions[6];
     BaryonUtils<FIMPL>::Wick_Contractions(quarksL,quarksR,wick_contractions);
     
     PropagatorField &q1  = envGet(PropagatorField, propsL[0]);
     PropagatorField &q2  = envGet(PropagatorField, propsL[1]);
     PropagatorField &q3  = envGet(PropagatorField, propsL[2]);
+    
+    std::vector<Result> result;
+    Result              r;
+    r.info.parity  = par().parity;
+    r.info.quarksR  = quarksR;
+    r.info.quarksL  = quarksL;
+    r.info.shuffle = par().shuffle;
+
+    std::vector<ResultMat> resultMat;
+    ResultMat              rMat;
+    rMat.info.parity  = 0;
+    rMat.info.quarksR  = quarksR;
+    rMat.info.quarksL  = quarksL;
+    rMat.info.shuffle = par().shuffle;
 
     if (par().sim_sink) { 
         for (unsigned int i = 0; i < gammaList.size(); ++i)
         {
-            std::vector<TComplex> buf;
-            std::vector<SpinMatrix> bufMat;
+            std::vector<TComplex> buf(nt);
+            std::vector<SpinMatrix> bufMat(nt, Zero());
 
             r.info.gammaA_left = gammaList[i].first.first;
             r.info.gammaB_left = gammaList[i].first.second;
             r.info.gammaA_right = gammaList[i].second.first;
             r.info.gammaB_right = gammaList[i].second.second;
-       
+
             rMat.info.gammaA_left = gammaList[i].first.first;
             rMat.info.gammaB_left = gammaList[i].first.second;
             rMat.info.gammaA_right = gammaList[i].second.first;
@@ -316,83 +326,74 @@ void TBaryonSpinMat<FImpl>::execute(void)
             std::string ns = vm().getModuleNamespace(env().getObjectModule(par().sinkq1));
             if (ns == "MSource")
             {
-   /*             c=Zero();
-                BaryonUtils<FIMPL>::ContractBaryons(q1,q2,q3,
-                                                    gAl,gBl,gAr,gBr,
-                                                    wick_contractions,
-                                                    par().parity,
-                                                    c);
                 PropagatorField &sink = envGet(PropagatorField, par().sinkq1);
-                auto test = closure(trace(sink*c));     
-                sliceSum(test, buf, Tp); 
-*/                          
-                cMat=Zero();
-                BaryonUtils<FIMPL>::ContractBaryons_matrix(q1,q2,q3,
-                                                    gAl,gBl,gAr,gBr,
-                                                    wick_contractions,
-                                                    cMat);
 
-                PropagatorField &sink = envGet(PropagatorField, par().sinkq1);
-                auto sinkTr = closure(trace(sink));
-                
-                envGetTmp(SpinMatrixField, test);
-                test = Zero();
+                if (par().trace) {
+                    c=Zero();
+                    BaryonUtils<FIMPL>::ContractBaryons(q1,q2,q3,
+                                                        gAl,gBl,gAr,gBr,
+                                                        wick_contractions,
+                                                        par().parity,
+                                                        c);
 
-                GridBase *grid = sink.Grid();
-  
-                  autoView( vtest , test ,CpuWrite);
-                  autoView( v1 , sinkTr, CpuRead);
-                  autoView( v2 , cMat, CpuRead);
+                    auto tmp = closure(trace(sink*c));     
+                    sliceSum(tmp, buf, Tp);
+                } else {
+                    cMat=Zero();
+                    BaryonUtils<FIMPL>::ContractBaryons_matrix(q1,q2,q3,
+                                                        gAl,gBl,gAr,gBr,
+                                                        wick_contractions,
+                                                        cMat);
 
-                  accelerator_for(ss, grid->oSites(), grid->Nsimd(), {                    
-                    vtest[ss] = v1[ss]*v2[ss]; 
-                  }  );//end loop over lattice sites
+                    auto sinkTr = closure(trace(sink));
 
-                sliceSum(test, bufMat, Tp);
+                    GridBase *grid = sink.Grid();
+      
+                    autoView( vsinkTr, sinkTr, CpuRead);
+                    autoView( vcMat  , cMat  , CpuWrite);
 
+                    accelerator_for(ss, grid->oSites(), grid->Nsimd(), {
+                        vcMat[ss] = vsinkTr[ss]*vcMat[ss]; 
+                    }  );//end loop over lattice sites
+
+                    sliceSum(cMat, bufMat, Tp);
+                }
             }
             else if (ns == "MSink")
             {
-  /*              c=Zero();
-                BaryonUtils<FIMPL>::ContractBaryons(q1,q2,q3,
-                                                    gAl,gBl,gAr,gBr,
-                                                    wick_contractions,
-                                                    par().parity,
-                                                    c);
+                if (par().trace) {
+                    c=Zero();
+                    BaryonUtils<FIMPL>::ContractBaryons(q1,q2,q3,
+                                                        gAl,gBl,gAr,gBr,
+                                                        wick_contractions,
+                                                        par().parity,
+                                                        c);
 
-                SinkFnScalar &sink = envGet(SinkFnScalar, par().sinkq1);
-                buf = sink(c);
-*/
-                cMat=Zero();
-                BaryonUtils<FIMPL>::ContractBaryons_matrix(q1,q2,q3,
-                                                    gAl,gBl,gAr,gBr,
-                                                    wick_contractions,
-                                                    cMat);
-                SinkFnMat &sink = envGet(SinkFnMat, par().sinkq1);
-                bufMat = sink(cMat);
-                // sliceSum(cMat,bufMat,Tp); // temporary
+                    SinkFnScalar &sink = envGet(SinkFnScalar, par().sinkq1);
+                    buf = sink(c);
+                } else {
+                    cMat=Zero();
+                    BaryonUtils<FIMPL>::ContractBaryons_matrix(q1,q2,q3,
+                                                        gAl,gBl,gAr,gBr,
+                                                        wick_contractions,
+                                                        cMat);
+
+                    SinkFnMat &sink = envGet(SinkFnMat, par().sinkq1);
+                    bufMat = sink(cMat);
+                }
             } 
-/*            r.corr.clear();
-            for (unsigned int t = 0; t < buf.size(); ++t)
-            {
-                r.corr.push_back(TensorRemove(buf[t]));
-            }
-            result.push_back(r);
-*/
-        rMat.corr.clear();
-            r.corr.clear();
-            for (unsigned int t = 0; t < bufMat.size(); ++t)
-            {
-                rMat.corr.push_back(bufMat[t]);
 
-                Gamma g4(Gamma::Algebra::GammaT);
-        auto g4r = g4 * bufMat[t];
-           auto Pr = 0.5*(g4r+bufMat[t]);
-           r.corr.push_back(trace(Pr));        
+            if (par().trace) {
+                r.corr.clear();
+                for (unsigned int t = 0; t < buf.size(); ++t)
+                    r.corr.push_back(TensorRemove(buf[t]));
+                result.push_back(r);
+            } else {
+                rMat.corr.clear();
+                for (unsigned int t = 0; t < bufMat.size(); ++t)
+                    rMat.corr.push_back(bufMat[t]);      
+                resultMat.push_back(rMat);
             }
-            resultMat.push_back(rMat);
-            result.push_back(r);
-        
         }
     } else {
         const int epsilon[6][3] = {{0,1,2},{1,2,0},{2,0,1},{0,2,1},{2,1,0},{1,0,2}};
@@ -413,10 +414,20 @@ void TBaryonSpinMat<FImpl>::execute(void)
             q3_slice[ie] = (*sinkFn[epsilon[ie][2]])(q3);
         }
 
-        // std::vector<TComplex> buf;
-        std::vector<SpinMatrix> bufMat;
-        for (int iG = 0; iG < gammaList.size(); iG++) {
-            bufMat = std::vector<SpinMatrix>(nt, Zero());
+        for (int iG = 0; iG < gammaList.size(); iG++)
+        {
+            std::vector<TComplex> buf(nt);
+            std::vector<SpinMatrix> bufMat(nt, Zero());
+
+            r.info.gammaA_left = gammaList[iG].first.first;
+            r.info.gammaB_left = gammaList[iG].first.second;
+            r.info.gammaA_right = gammaList[iG].second.first;
+            r.info.gammaB_right = gammaList[iG].second.second;
+
+            rMat.info.gammaA_left = gammaList[iG].first.first;
+            rMat.info.gammaB_left = gammaList[iG].first.second;
+            rMat.info.gammaA_right = gammaList[iG].second.first;
+            rMat.info.gammaB_right = gammaList[iG].second.second;
 
             Gamma gAl(gammaList[iG].first.first);
             Gamma gBl(gammaList[iG].first.second);
@@ -430,62 +441,41 @@ void TBaryonSpinMat<FImpl>::execute(void)
                     for (int i=0; i<6; i++)
                         wc[i] = (i == ie);
 
-                    // BaryonUtils<FIMPL>::ContractBaryons_Sliced( q1_slice[ie],q2_slice[ie],q3_slice[ie],
-                    //                                             gAl,gBl,gAr,gBr,
-                    //                                             wc,
-                    //                                             par().parity,
-                    //                                             nt,
-                    //                                             buf);
-
-                    BaryonUtils<FIMPL>::ContractBaryons_Sliced_matrix( q1_slice[ie],q2_slice[ie],q3_slice[ie],
-                                                                gAl,gBl,gAr,gBr,
-                                                                wc,
-                                                                nt,
-                                                                bufMat);
-
-                    
+                    if (par().trace) {
+                        BaryonUtils<FIMPL>::ContractBaryons_Sliced( q1_slice[ie],q2_slice[ie],q3_slice[ie],
+                                                                    gAl,gBl,gAr,gBr,
+                                                                    wc,
+                                                                    par().parity,
+                                                                    nt,
+                                                                    buf);
+                    } else {
+                        BaryonUtils<FIMPL>::ContractBaryons_Sliced_matrix( q1_slice[ie],q2_slice[ie],q3_slice[ie],
+                                                                        gAl,gBl,gAr,gBr,
+                                                                        wc,
+                                                                        nt,
+                                                                        bufMat);
+                    }
                 }
             }
-            r.info.gammaA_left = gammaList[iG].first.first;
-            r.info.gammaB_left = gammaList[iG].first.second;
-            r.info.gammaA_right = gammaList[iG].second.first;
-            r.info.gammaB_right = gammaList[iG].second.second;
 
-
-            rMat.info.gammaA_left = gammaList[iG].first.first;
-            rMat.info.gammaB_left = gammaList[iG].first.second;
-            rMat.info.gammaA_right = gammaList[iG].second.first;
-            rMat.info.gammaB_right = gammaList[iG].second.second;
-
-            // r.corr.clear();
-            // for (int t = 0; t < nt; t++) {
-            //     r.corr.push_back(TensorRemove(buf[t]));
-            // }
-            // result.push_back(r);
-
-            rMat.corr.clear();
-            r.corr.clear();
-            for (unsigned int t = 0; t < nt; ++t)
-            {
-                rMat.corr.push_back(bufMat[t]);
-
-                Gamma g4(Gamma::Algebra::GammaT);
-                auto g4r = g4 * bufMat[t];
-                auto Pr = 0.5*(g4r+bufMat[t]);
-                r.corr.push_back(trace(Pr));        
+            if (par().trace) {
+                r.corr.clear();
+                for (int t = 0; t < nt; t++)
+                    r.corr.push_back(TensorRemove(buf[t]));
+                result.push_back(r);
+            } else {
+                rMat.corr.clear();
+                for (unsigned int t = 0; t < bufMat.size(); ++t)
+                    rMat.corr.push_back(bufMat[t]);      
+                resultMat.push_back(rMat);
             }
-            resultMat.push_back(rMat);
-            result.push_back(r);
-                
         }
-        
     }
 
-    
-  //  saveResult(par().output, "baryon", result);
-
-    saveResult(par().output + "Matrix", "baryonMat", resultMat);
-    saveResult(par().output, "baryon", result);
+    if (par().trace)
+        saveResult(par().output, "baryon", result);
+    else 
+        saveResult(par().output + "_Matrix", "baryonMat", resultMat);
     
 }
 
