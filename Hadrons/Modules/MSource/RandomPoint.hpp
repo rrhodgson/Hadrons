@@ -55,7 +55,7 @@ class RandomPointPar: Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(RandomPointPar,
-                                    std::string, time);
+                                    std::string, t);
 };
 
 template <typename FImpl>
@@ -118,13 +118,13 @@ void TRandomPoint<FImpl>::setup(void)
 template <typename FImpl>
 void TRandomPoint<FImpl>::execute(void)
 {
-    LOG(Message) << "Creating random point source at time " << par().time << std::endl;
+    LOG(Message) << "Creating random point source at time " << par().t << std::endl;
 
     auto             &src     = envGet(PropagatorField, getName());
     SitePropagator   id;
 
     GridSerialRNG sRNG;
-    sRNG.SeedUniqueString( getName() + ":t"+par().time +":traj"+ std::to_string(vm().getTrajectory()) );
+    sRNG.SeedUniqueString( getName() + ":t"+par().t +":traj"+ std::to_string(vm().getTrajectory()) );
 
     int dim=env().getNd()-1;
 
@@ -138,7 +138,7 @@ void TRandomPoint<FImpl>::execute(void)
         
         position.push_back( abs(tmp) % env().getDim(d) );
     }
-    position.push_back( stoi(par().time) );
+    position.push_back( stoi(par().t) );
     std::cout << position << std::endl;
 
     id  = 1.;
