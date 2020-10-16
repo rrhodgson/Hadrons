@@ -92,8 +92,9 @@ class TSigmaToNucleonNonEye: public Module<SigmaToNucleonNonEyePar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
-    BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
-    SINK_TYPE_ALIASES(Scalar);
+    SINK_TYPE_ALIASES();
+    // BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
+    // SINK_TYPE_ALIASES(Scalar);
     typedef typename SpinMatrixField::vector_object::scalar_object SpinMatrix;
     class Metadata: Serializable
     {
@@ -190,10 +191,16 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
 
     auto &quTi      = envGet(PropagatorField, par().quTi);
     auto &quTf      = envGet(PropagatorField, par().quTf);
-    auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    // auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    auto &quSpec    = envGet(PropagatorField, par().quSpec);
     auto &qdTf      = envGet(PropagatorField, par().qdTf);
     auto &qsTi      = envGet(PropagatorField, par().qsTi);
-    auto qut         = quSpec[par().tf];
+
+    auto &sink      = envGet(SinkFn, par().sink);
+
+    SlicedPropagator quSpec_slice    = sink(quSpec);
+    auto qut         = quSpec_slice[par().tf];
+
     for (auto &G: Gamma::gall)
     {
       r.info.gammaH = G.g;
