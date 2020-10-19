@@ -73,10 +73,15 @@ class TBaryonSpinMat: public Module<BaryonSpinMatPar>
 public:
     FERM_TYPE_ALIASES(FImpl,);
     SINK_TYPE_ALIASES();
+    
     BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
     SINK_TYPE_ALIASES(Scalar);
-    BASIC_TYPE_ALIASES(SpinMatImplCR, Mat);
-    SINK_TYPE_ALIASES(Mat);
+
+    typedef Lattice<iScalar<iMatrix<iScalar<vComplex>,Ns>>> FieldMat;
+    typedef std::vector<FieldMat::scalar_object> SlicedPropagatorMat;
+    typedef std::function<SlicedPropagatorMat\
+                      (const FieldMat &)> SinkFnMat;
+
     class Metadata: Serializable
     {
     public:

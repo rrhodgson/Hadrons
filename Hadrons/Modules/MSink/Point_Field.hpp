@@ -78,14 +78,12 @@ private:
 };
 
 
-typedef ScalarSpinMatrixImplTypes<vComplex,4> SpinMatImplCR;
+typedef Lattice<iScalar<iMatrix<iScalar<vComplex>,Ns>>> SpinMatField;
 
 
-
-
-// MODULE_REGISTER_TMP(Point_Field,       TPoint_Field<Field>,        MSink);
+MODULE_REGISTER_TMP(Point_Field,       TPoint_Field<FIMPL::PropagatorField>,        MSink);
 MODULE_REGISTER_TMP(ScalarPoint_Field, TPoint_Field<ScalarImplCR::Field>, MSink);
-// MODULE_REGISTER_TMP(SMatPoint_Field,   TPoint_Field<SpinMatImplCR>, MSink);
+MODULE_REGISTER_TMP(SMatPoint_Field,   TPoint_Field< SpinMatField >, MSink);
 
 /******************************************************************************
  *                          TPoint_Field implementation                             *

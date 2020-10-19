@@ -1,5 +1,5 @@
 /*
- * Point_Field.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
+ * Smear_Field.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
  * Copyright (C) 2015 - 2020
  *
@@ -23,18 +23,15 @@
  */
 
 /*  END LEGAL */
-#include <Hadrons/Modules/MSink/Point_Field.hpp>
+#include <Hadrons/Modules/MSink/Smear_Field.hpp>
 
 using namespace Grid;
 using namespace Hadrons;
 using namespace MSink;
 
-
 typedef Lattice<iScalar<iMatrix<iScalar<vComplex>,Ns>>> SpinMatField;
 
-
-template class Grid::Hadrons::MSink::TPoint_Field<FIMPL::PropagatorField>;
-template class Grid::Hadrons::MSink::TPoint_Field<ScalarImplCR::Field>;
-template class Grid::Hadrons::MSink::TPoint_Field<SpinMatField>;
-
+template class Grid::Hadrons::MSink::TSmear_Field<FIMPL::PropagatorField>;
+template class Grid::Hadrons::MSink::TSmear_Field<ScalarImplCR::Field>;
+template class Grid::Hadrons::MSink::TSmear_Field<SpinMatField>;
 
