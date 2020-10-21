@@ -201,7 +201,17 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     SlicedPropagator quSpec_slice    = sink(quSpec);
     auto qut         = quSpec_slice[par().tf];
 
-    for (auto &G: Gamma::gall)
+    const std::array<const Gamma, 8> g = {{
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5)}};
+
+    for (auto &G: g)
     {
       r.info.gammaH = G.g;
       //Operator Q1, equivalent to the two-trace case in the rare-kaons module
