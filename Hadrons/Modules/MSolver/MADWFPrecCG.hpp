@@ -50,16 +50,18 @@ public:
                                     unsigned int, maxInnerIteration,
                                     unsigned int, maxOuterIteration,
                                     double      , residual,
-                                    std::string , eigenPack);
+                                    std::string , eigenPack,
+                                    std::string , gauge);
 };
 
-template <typename FImplInner, typename FImplOuter, int nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
 class TMADWFPrecCG: public Module<MADWFPrecCGPar>
 {
 public:
     FERM_TYPE_ALIASES(FImplInner, Inner);
     FERM_TYPE_ALIASES(FImplOuter, Outer);
     SOLVER_TYPE_ALIASES(FImplOuter,);
+    GAUGE_TYPE_ALIASES(GImpl,);
     typedef HADRONS_DEFAULT_SCHUR_OP<FMatInner, FermionFieldInner> SchurFMatInner;
     typedef HADRONS_DEFAULT_SCHUR_OP<FMatOuter, FermionFieldOuter> SchurFMatOuter;
 private:
@@ -95,21 +97,21 @@ public:
 
 // MODULE_REGISTER_TMP(MADWFPrecCG, 
     // ARG(TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
-MODULE_REGISTER_TMP(ZMADWFPrecCG, ARG(TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
+MODULE_REGISTER_TMP(ZMADWFPrecCG, ARG(TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>), MSolver);
 
 /******************************************************************************
  *                 TMADWFPrecCG implementation                             *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
-template <typename FImplInner, typename FImplOuter, int nBasis>
-TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::TMADWFPrecCG(const std::string name)
 : Module<MADWFPrecCGPar>(name)
 {}
 
 // dependencies/products ///////////////////////////////////////////////////////
-template <typename FImplInner, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::getInput(void)
 {
     std::vector<std::string> in;
@@ -117,11 +119,11 @@ std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
     return in;
 }
 
-template <typename FImplInner, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::getReference(void)
 {
-    std::vector<std::string> ref = {par().innerAction, par().outerAction};
+    std::vector<std::string> ref = {par().innerAction, par().outerAction, par().gauge};
     
     if (!par().eigenPack.empty())
     {
@@ -131,8 +133,8 @@ std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
     return ref;
 }
 
-template <typename FImplInner, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::getOutput(void)
 {
     std::vector<std::string> out = {getName(), getName() + "_subtract"};
@@ -157,8 +159,8 @@ struct CGincreaseTol : public MADWFinnerIterCallbackBase{
 
 
 // setup ///////////////////////////////////////////////////////////////////////
-template <typename FImplInner, typename FImplOuter, int nBasis>
-void TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::setup(void)
 {
     LOG(Message) << "Setting up Schur red-black preconditioned MADWF "
@@ -175,61 +177,67 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
     auto &omat     = envGet(FMatOuter, par().outerAction);
     auto &imat     = envGet(FMatInner, par().innerAction);
 
+    // GridBase UGrid = omat.GaugeGrid();
+    // GridBase FGrid = omat.FermionGrid();
+
     MobiusFermionD &D_outer  = envGetDerived(FMatOuter,MobiusFermionD,par().outerAction);
     ZMobiusFermionD &D_inner = envGetDerived(FMatInner,ZMobiusFermionD,par().innerAction);
 
+    auto &U = envGet(GaugeField, par().gauge);
+
     auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
 
-    auto makeSolver = [&D_outer, &D_inner, &omat, guesserPt, this](bool subGuess) mutable
+    double residual = par().residual;
+
+    auto makeSolver = [&D_outer, &D_inner, &U, guesserPt, residual, this](bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &omat, guesserPt, subGuess, this]
+        return [&D_outer, &D_inner, &U, guesserPt, subGuess, residual, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
-            // std::cout << "Start setup CGs" << std::endl;
-            ConjugateGradient<LatticeFermionD> CG_outer(par().residual, 10000);
-            ConjugateGradient<LatticeFermionD> CG_inner(par().residual, 10000, 0);
-            // std::cout << "End setup CGs" << std::endl;
+            std::cout << "Setup lattices" << std::endl;
 
-            // std::cout << "Start setup gauge field" << std::endl;
-            LatticeGaugeFieldD Umu(omat.FermionGrid()); // TODO: should be filled with actual gauge config
-            // std::cout << "End setup gauge field" << std::endl;
+            LatticeGaugeFieldD Umu(U);
 
-            // std::cout << "Start setup source" << std::endl;
-            LatticeFermionD src_outer(omat.FermionGrid());
-            D_outer.ImportPhysicalFermionSource(source,src_outer); //applies D_- 
-            //                             // TODO: ^ should src4 be source
-            // std::cout << "End setup source" << std::endl;
+            LatticeFermionD src_outer(source.Grid());
+            LatticeFermionD src4(U.Grid()); // TODO: Get this from source
+            GridParallelRNG RNG4(U.Grid());
+            std::vector<int> seeds4({1, 2, 3, 4});
+            RNG4.SeedFixedIntegers(seeds4);
+            random(RNG4,src4);
 
 
-            // std::cout << "Start setup PV" << std::endl;
+            D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
+
+            LatticeFermionD result_MADWF(source.Grid());
+            result_MADWF = Zero();
+
+
+            std::cout << "Setup CG and solvers" << std::endl;
+
+            ConjugateGradient<LatticeFermionD> CG_outer(residual, 10000);
+            ConjugateGradient<LatticeFermionD> CG_inner(residual, 10000, 0);
+            CGincreaseTol update(CG_inner, residual);
+
             typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
             PVtype PV_outer(Umu, CG_outer);
-            // std::cout << "End setup PV" << std::endl;
-
 
             typedef SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolverType;
-
-            // std::cout << "Start setup update" << std::endl;
-            CGincreaseTol update(CG_inner, par().residual);
-            // std::cout << "End setup update" << std::endl;
-
-
-            // std::cout << "Start setup Shur Solver" << std::endl;
             SchurSolverType SchurSolver_inner(CG_inner);
-            // std::cout << "End setup Shur Solver" << std::endl;
 
-            // std::cout << "Start MADWF setup" << std::endl;
+
+            std::cout << "Setup MADWF" << std::endl;
+
             MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurSolverType, LinearFunction<LatticeFermion> > 
-                    madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, par().residual, 100, &update);
-            // std::cout << "End MADWF setup" << std::endl;
+                    madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, residual, 100, &update);
 
 
-            LatticeFermionD result_MADWF(omat.FermionGrid());
-            result_MADWF = Zero();
-                    
-            // std::cout << "Start MADWF solve" << std::endl;
-            madwf(source, result_MADWF);
-            // std::cout << "End MADWF solve" << std::endl;
+            std::cout << "Run MADWF" << std::endl;
+
+            madwf(src4, result_MADWF);
+
+            sol = result_MADWF; //TODO: do this somehow
+
+
 
 
 
@@ -414,8 +422,8 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
 }
 
 // execution ///////////////////////////////////////////////////////////////////
-template <typename FImplInner, typename FImplOuter, int nBasis>
-void TMADWFPrecCG<FImplInner, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
+void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::execute(void)
 {}
 
