@@ -177,9 +177,6 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     auto &omat     = envGet(FMatOuter, par().outerAction);
     auto &imat     = envGet(FMatInner, par().innerAction);
 
-    // GridBase UGrid = omat.GaugeGrid();
-    // GridBase FGrid = omat.FermionGrid();
-
     MobiusFermionD &D_outer  = envGetDerived(FMatOuter,MobiusFermionD,par().outerAction);
     ZMobiusFermionD &D_inner = envGetDerived(FMatInner,ZMobiusFermionD,par().innerAction);
 
@@ -189,9 +186,9 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
     double residual = par().residual;
 
-    auto makeSolver = [&D_outer, &D_inner, &U, guesserPt, residual, this](bool subGuess) mutable
+    auto makeSolver = [&D_outer, &D_inner, &U, guesserPt, residual](bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &U, guesserPt, subGuess, residual, this]
+        return [&D_outer, &D_inner, &U, guesserPt, subGuess, residual]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
             std::cout << "Setup lattices" << std::endl;
@@ -200,13 +197,13 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
             LatticeFermionD src_outer(source.Grid());
             LatticeFermionD src4(U.Grid()); // TODO: Get this from source
-            GridParallelRNG RNG4(U.Grid());
-            std::vector<int> seeds4({1, 2, 3, 4});
-            RNG4.SeedFixedIntegers(seeds4);
-            random(RNG4,src4);
-
+            // GridParallelRNG RNG4(U.Grid());
+            // std::vector<int> seeds4({1, 2, 3, 4});
+            // RNG4.SeedFixedIntegers(seeds4);
+            // random(RNG4,src4);
 
             D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
+            src_outer = source;
 
             LatticeFermionD result_MADWF(source.Grid());
             result_MADWF = Zero();
@@ -235,8 +232,8 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
             madwf(src4, result_MADWF);
 
-            sol = result_MADWF; //TODO: do this somehow
-
+            sol = result_MADWF; 
+            // D_outer.ImportUnphysicalFermion(result_MADWF,sol);
 
 
 
