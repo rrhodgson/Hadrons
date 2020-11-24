@@ -196,7 +196,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
             LatticeGaugeFieldD Umu(U);
 
             LatticeFermionD src_outer(source.Grid());
-            
+
             LatticeFermionD src4(U.Grid()); // TODO: Get this from source
             GridParallelRNG RNG4(U.Grid());
             std::vector<int> seeds4({1, 2, 3, 4});
@@ -259,171 +259,174 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     envCreate(Solver, getName(), Ls_outer, solver, omat);
     auto solver_subtract = makeSolver(true);
     envCreate(Solver, getName() + "_subtract", Ls_outer, solver_subtract, omat);
-
-// bool load_config = false;
-// std::string config_file = "ckpoint_lat.1000";
-// config_file = "/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
-
-
-// double mass = 0.01;
-
-// double b_plus_c_inner = 1.0;
-// int Ls_inner = 12;
-
-// double b_plus_c_outer = 2.0;
-// int Ls_outer = 24;
-
-// double lambda_max = 1.42;
-
-// double resid_outer = 1e-8;
-// double resid_inner = 1e-8;
-
-//     RealD bmc = 1.0; //use Shamir kernel
-//   std::vector<ComplexD> gamma_inner;
-
-//   std::cout << "Compute parameters" << std::endl;
-// Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
-  
-//   std::cout << "gamma:\n";
-//   for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
-
-
-//   GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
-//       GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
-//       GridDefaultMpi());
-//   GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
-
-
-//   GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
-//   GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
-
-//   GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
-//   GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
-
-
-//   std::vector<int> seeds4({1, 2, 3, 4});
-//   std::vector<int> seeds5({5, 6, 7, 8});
-
-//   GridParallelRNG RNG5_outer(FGrid_outer);
-//   RNG5_outer.SeedFixedIntegers(seeds5);
-
-//   GridParallelRNG RNG4(UGrid);
-//   RNG4.SeedFixedIntegers(seeds4);
-
-//   LatticeFermionD src4(UGrid); random(RNG4,src4);
-
-//   LatticeFermionD result_outer(FGrid_outer);
-//   result_outer = Zero();
-//   LatticeGaugeFieldD Umu(UGrid);
-
-//   if(load_config){
-//     FieldMetaData header;
-//     NerscIO::readConfiguration(Umu, header, config_file);
-
-//     for(int i=0;i<Nd;i++){
-//       assert(header.dimension[i] == GridDefaultLatt()[i]);
-//     }
-//   }else{    
-//     SU<Nc>::HotConfiguration(RNG4, Umu);
-//   }
-    
-//   std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
-//             << "   Ls: " << Ls_outer << std::endl;
-
-//   RealD M5 = 1.8;
-
-//   RealD b_outer = (b_plus_c_outer + bmc)/2.;
-//   RealD c_outer = (b_plus_c_outer - bmc)/2.;
-
-//   RealD b_inner = (b_plus_c_inner + bmc)/2.;
-//   RealD c_inner = (b_plus_c_inner - bmc)/2.;
-
-//   MobiusFermionD D_outer(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
-//   ZMobiusFermionD D_inner(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
-
-//   LatticeFermionD src_outer(FGrid_outer);
-//   D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
-
-//   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
-//   //M y = x
-//   //Mprec y'_o = x'_o     where Mprec = Doo - Doe Dee^-1 Deo    and  x'_o = -Doe Dee^-1 x_e + x_o
-//   //y_o = y'_o
-
-//   //(Mprec^dag Mprec) y'_o = Mprec^dag x'_o 
-//   //y'_o = (Mprec^dag Mprec)^-1 Mprec^dag x'_o 
-
-//   //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
-//   ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, 10000);
-//   SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_outer(CG_outer);
-  
-//   LatticeFermionD tmp_e_outer(FrbGrid_outer);
-//   LatticeFermionD src_o_outer(FrbGrid_outer);
-//   SchurSolver_outer.RedBlackSource(D_outer, src_outer, tmp_e_outer, src_o_outer);
-  
-//   LatticeFermionD result_o_outer(FrbGrid_outer);
-//   result_o_outer = Zero();
-
-//   GridStopWatch CGTimer;
-  
-//   SchurDiagTwoOperator<MobiusFermionD, LatticeFermionD> HermOpEO_outer(D_outer);
-
-//   CGTimer.Start();
-//   CG_outer(HermOpEO_outer, src_o_outer, result_o_outer);
-//   CGTimer.Stop();
-
-//   std::cout << GridLogMessage << "Total outer CG time : " << CGTimer.Elapsed()
-//             << std::endl;
-
-//   CGTimer.Reset();
-
-//   //Solve for y using MADWF with internal preconditioning
-
-//   //typedef PauliVillarsSolverRBprec<LatticeFermionD, typename RunParamsOuter::SchurSolverType> PVtype;
-//   //PVtype PV_outer(SchurSolver_outer);
-
-//   typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
-//   PVtype PV_outer(Umu, CG_outer);
-
-//   ConjugateGradient<LatticeFermionD> CG_inner(resid_inner, 10000, 0);
-
-//   CGincreaseTol update(CG_inner, resid_outer);
-
-//   SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
-
-//   ZeroGuesser<LatticeFermion> Guess;
-//   MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
-  
-//   // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 100, &update);
-
-
-//   LatticeFermionD result_MADWF(FGrid_outer);
-//   result_MADWF = Zero();
-
-//   CGTimer.Start();
-//   madwf(src4, result_MADWF);
-//   CGTimer.Stop();
-
-//   LatticeFermionD result_o_MADWF(FrbGrid_outer);
-//   pickCheckerboard(Odd, result_o_MADWF, result_MADWF);
-
-//   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
-//             << std::endl;
-
-//   LatticeFermionD diff = result_o_MADWF - result_o_outer;
-//   std::cout <<GridLogMessage<< "Odd-parity MADWF result norm " << norm2(result_o_MADWF) 
-//         << " Regular result norm " << norm2(result_o_outer) 
-//         << " Norm of diff " << norm2(diff)<<std::endl;
-
-
-//   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
-//   D_outer.Report();
 }
 
 // execution ///////////////////////////////////////////////////////////////////
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
 void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::execute(void)
-{}
+{
+
+
+bool load_config = false;
+std::string config_file = "ckpoint_lat.1000";
+config_file = "/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
+
+
+double mass = 0.01;
+
+double b_plus_c_inner = 1.0;
+int Ls_inner = 12;
+
+double b_plus_c_outer = 2.0;
+int Ls_outer = 24;
+
+double lambda_max = 1.42;
+
+double resid_outer = 1e-8;
+double resid_inner = 1e-8;
+
+    RealD bmc = 1.0; //use Shamir kernel
+  std::vector<ComplexD> gamma_inner;
+
+  std::cout << "Compute parameters" << std::endl;
+Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+  
+  std::cout << "gamma:\n";
+  for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
+
+
+  GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
+      GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
+      GridDefaultMpi());
+  GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
+
+
+  GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
+  GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
+
+  GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
+  GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
+
+
+  std::vector<int> seeds4({1, 2, 3, 4});
+  std::vector<int> seeds5({5, 6, 7, 8});
+
+  GridParallelRNG RNG5_outer(FGrid_outer);
+  RNG5_outer.SeedFixedIntegers(seeds5);
+
+  GridParallelRNG RNG4(UGrid);
+  RNG4.SeedFixedIntegers(seeds4);
+
+  LatticeFermionD src4(UGrid); random(RNG4,src4);
+
+  LatticeFermionD result_outer(FGrid_outer);
+  result_outer = Zero();
+  LatticeGaugeFieldD Umu(UGrid);
+
+  if(load_config){
+    FieldMetaData header;
+    NerscIO::readConfiguration(Umu, header, config_file);
+
+    for(int i=0;i<Nd;i++){
+      assert(header.dimension[i] == GridDefaultLatt()[i]);
+    }
+  }else{    
+    SU<Nc>::HotConfiguration(RNG4, Umu);
+  }
+    
+  std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
+            << "   Ls: " << Ls_outer << std::endl;
+
+  RealD M5 = 1.8;
+
+  RealD b_outer = (b_plus_c_outer + bmc)/2.;
+  RealD c_outer = (b_plus_c_outer - bmc)/2.;
+
+  RealD b_inner = (b_plus_c_inner + bmc)/2.;
+  RealD c_inner = (b_plus_c_inner - bmc)/2.;
+
+  MobiusFermionD D_outer(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
+  ZMobiusFermionD D_inner(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
+
+  LatticeFermionD src_outer(FGrid_outer);
+  D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
+
+  //Solve using a regular even-odd preconditioned CG for the Hermitian operator
+  //M y = x
+  //Mprec y'_o = x'_o     where Mprec = Doo - Doe Dee^-1 Deo    and  x'_o = -Doe Dee^-1 x_e + x_o
+  //y_o = y'_o
+
+  //(Mprec^dag Mprec) y'_o = Mprec^dag x'_o 
+  //y'_o = (Mprec^dag Mprec)^-1 Mprec^dag x'_o 
+
+  //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
+  ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, 10000);
+  SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_outer(CG_outer);
+  
+  LatticeFermionD tmp_e_outer(FrbGrid_outer);
+  LatticeFermionD src_o_outer(FrbGrid_outer);
+  SchurSolver_outer.RedBlackSource(D_outer, src_outer, tmp_e_outer, src_o_outer);
+  
+  LatticeFermionD result_o_outer(FrbGrid_outer);
+  result_o_outer = Zero();
+
+  GridStopWatch CGTimer;
+  
+  SchurDiagTwoOperator<MobiusFermionD, LatticeFermionD> HermOpEO_outer(D_outer);
+
+  CGTimer.Start();
+  CG_outer(HermOpEO_outer, src_o_outer, result_o_outer);
+  CGTimer.Stop();
+
+  std::cout << GridLogMessage << "Total outer CG time : " << CGTimer.Elapsed()
+            << std::endl;
+
+  CGTimer.Reset();
+
+  //Solve for y using MADWF with internal preconditioning
+
+  //typedef PauliVillarsSolverRBprec<LatticeFermionD, typename RunParamsOuter::SchurSolverType> PVtype;
+  //PVtype PV_outer(SchurSolver_outer);
+
+  typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
+  PVtype PV_outer(Umu, CG_outer);
+
+  ConjugateGradient<LatticeFermionD> CG_inner(resid_inner, 10000, 0);
+
+  CGincreaseTol update(CG_inner, resid_outer);
+
+  SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
+
+  ZeroGuesser<LatticeFermion> Guess;
+  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
+  
+  // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 100, &update);
+
+
+  LatticeFermionD result_MADWF(FGrid_outer);
+  result_MADWF = Zero();
+
+  CGTimer.Start();
+  madwf(src4, result_MADWF);
+  CGTimer.Stop();
+
+  LatticeFermionD result_o_MADWF(FrbGrid_outer);
+  pickCheckerboard(Odd, result_o_MADWF, result_MADWF);
+
+  std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
+            << std::endl;
+
+  LatticeFermionD diff = result_o_MADWF - result_o_outer;
+  std::cout <<GridLogMessage<< "Odd-parity MADWF result norm " << norm2(result_o_MADWF) 
+        << " Regular result norm " << norm2(result_o_outer) 
+        << " Norm of diff " << norm2(diff)<<std::endl;
+
+
+  std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
+  D_outer.Report();
+    
+}
 
 END_MODULE_NAMESPACE
 
