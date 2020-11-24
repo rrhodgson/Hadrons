@@ -262,6 +262,56 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     envCreate(Solver, getName() + "_subtract", Ls_outer, solver_subtract, omat);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // execution ///////////////////////////////////////////////////////////////////
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
 void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
@@ -362,27 +412,27 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
   ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, 10000);
-  SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_outer(CG_outer);
+  // SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_outer(CG_outer);
   
-  LatticeFermionD tmp_e_outer(FrbGrid_outer);
-  LatticeFermionD src_o_outer(FrbGrid_outer);
-  SchurSolver_outer.RedBlackSource(D_outer, src_outer, tmp_e_outer, src_o_outer);
+  // LatticeFermionD tmp_e_outer(FrbGrid_outer);
+  // LatticeFermionD src_o_outer(FrbGrid_outer);
+  // SchurSolver_outer.RedBlackSource(D_outer, src_outer, tmp_e_outer, src_o_outer);
   
-  LatticeFermionD result_o_outer(FrbGrid_outer);
-  result_o_outer = Zero();
+  // LatticeFermionD result_o_outer(FrbGrid_outer);
+  // result_o_outer = Zero();
 
   GridStopWatch CGTimer;
   
-  SchurDiagTwoOperator<MobiusFermionD, LatticeFermionD> HermOpEO_outer(D_outer);
+  // SchurDiagTwoOperator<MobiusFermionD, LatticeFermionD> HermOpEO_outer(D_outer);
 
-  CGTimer.Start();
-  CG_outer(HermOpEO_outer, src_o_outer, result_o_outer);
-  CGTimer.Stop();
+  // CGTimer.Start();
+  // CG_outer(HermOpEO_outer, src_o_outer, result_o_outer);
+  // CGTimer.Stop();
 
-  std::cout << GridLogMessage << "Total outer CG time : " << CGTimer.Elapsed()
-            << std::endl;
+  // std::cout << GridLogMessage << "Total outer CG time : " << CGTimer.Elapsed()
+  //           << std::endl;
 
-  CGTimer.Reset();
+  // CGTimer.Reset();
 
   //Solve for y using MADWF with internal preconditioning
 
@@ -417,10 +467,10 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
             << std::endl;
 
-  LatticeFermionD diff = result_o_MADWF - result_o_outer;
-  std::cout <<GridLogMessage<< "Odd-parity MADWF result norm " << norm2(result_o_MADWF) 
-        << " Regular result norm " << norm2(result_o_outer) 
-        << " Norm of diff " << norm2(diff)<<std::endl;
+  // LatticeFermionD diff = result_o_MADWF - result_o_outer;
+  // std::cout <<GridLogMessage<< "Odd-parity MADWF result norm " << norm2(result_o_MADWF) 
+  //       << " Regular result norm " << norm2(result_o_outer) 
+  //       << " Norm of diff " << norm2(diff)<<std::endl;
 
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
