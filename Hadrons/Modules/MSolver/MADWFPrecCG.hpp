@@ -51,7 +51,8 @@ public:
                                     unsigned int, maxOuterIteration,
                                     double      , residual,
                                     std::string , eigenPack,
-                                    std::string , gauge);
+                                    std::string , gauge,
+                                    std::string , gaugefile);
 };
 
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
@@ -268,9 +269,8 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 {
 
 
-bool load_config = false;
-std::string config_file = "ckpoint_lat.1000";
-config_file = "/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
+bool load_config = true;
+std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 
 
 double mass = 0.01;
@@ -425,7 +425,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
   D_outer.Report();
-    
+
 }
 
 END_MODULE_NAMESPACE
