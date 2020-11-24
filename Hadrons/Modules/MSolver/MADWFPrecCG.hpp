@@ -192,6 +192,78 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
         return [&D_outer, &D_inner, &U, guesserPt, subGuess, residual]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
+
+
+double mass = 0.01;
+
+double b_plus_c_inner = 1.0;
+int Ls_inner = 12;
+
+double b_plus_c_outer = 2.0;
+int Ls_outer = 24;
+
+double lambda_max = 1.42;
+
+double resid_outer = 1e-8;
+double resid_inner = 1e-8;
+
+  GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
+      GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
+      GridDefaultMpi());
+  GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
+
+
+  GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
+  GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
+
+  GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
+  GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
+
+
+
+
+  RealD M5 = 1.8;
+  RealD bmc = 1.0;
+
+  RealD b_outer = (b_plus_c_outer + bmc)/2.;
+  RealD c_outer = (b_plus_c_outer - bmc)/2.;
+
+  RealD b_inner = (b_plus_c_inner + bmc)/2.;
+  RealD c_inner = (b_plus_c_inner - bmc)/2.;
+
+
+
+  std::vector<ComplexD> gamma_inner;
+
+  std::cout << "Compute parameters" << std::endl;
+Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             std::cout << "Setup lattices" << std::endl;
 
             LatticeGaugeFieldD Umu(U);
@@ -204,7 +276,13 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
             RNG4.SeedFixedIntegers(seeds4);
             random(RNG4,src4);
 
-            D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
+
+  MobiusFermionD D_outer_loc(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
+  ZMobiusFermionD D_inner_loc(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
+
+
+
+            D_outer_loc.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
             // D_outer.ImportUnphysicalFermion(source,src4);
             // src4 = source;
 
@@ -228,7 +306,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
             std::cout << "Setup MADWF" << std::endl;
 
             MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurSolverType, LinearFunction<LatticeFermion> > 
-                    madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, residual, 100, &update);
+                    madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, residual, 100, &update);
 
 
             std::cout << "Run MADWF" << std::endl;
@@ -399,8 +477,8 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   MobiusFermionD D_outer(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
   ZMobiusFermionD D_inner(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
 
-  LatticeFermionD src_outer(FGrid_outer);
-  D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
+  // LatticeFermionD src_outer(FGrid_outer);
+  // D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
 
   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
   //M y = x
