@@ -196,14 +196,16 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
             LatticeGaugeFieldD Umu(U);
 
             LatticeFermionD src_outer(source.Grid());
+            
             LatticeFermionD src4(U.Grid()); // TODO: Get this from source
-            // GridParallelRNG RNG4(U.Grid());
-            // std::vector<int> seeds4({1, 2, 3, 4});
-            // RNG4.SeedFixedIntegers(seeds4);
-            // random(RNG4,src4);
+            GridParallelRNG RNG4(U.Grid());
+            std::vector<int> seeds4({1, 2, 3, 4});
+            RNG4.SeedFixedIntegers(seeds4);
+            random(RNG4,src4);
 
-            D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
-            src_outer = source;
+            D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
+            // D_outer.ImportUnphysicalFermion(source,src4);
+            // src4 = source;
 
             LatticeFermionD result_MADWF(source.Grid());
             result_MADWF = Zero();
@@ -232,8 +234,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
             madwf(src4, result_MADWF);
 
-            sol = result_MADWF; 
-            // D_outer.ImportUnphysicalFermion(result_MADWF,sol);
+            sol = result_MADWF;
 
 
 
