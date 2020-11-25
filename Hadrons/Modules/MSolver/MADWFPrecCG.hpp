@@ -187,9 +187,9 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
     double residual = par().residual;
 
-    auto makeSolver = [&D_outer, &D_inner, &U, guesserPt, residual, this](bool subGuess) mutable
+    auto makeSolver = [&D_outer, &D_inner, &omat, &U, guesserPt, residual, this](bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &U, guesserPt, subGuess, residual, this]
+        return [&D_outer, &D_inner, &omat, &U, guesserPt, subGuess, residual, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
 
@@ -316,7 +316,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   
 
-  LatticeFermionD result_MADWF(FGrid_outer);
+  LatticeFermionD result_MADWF(omat.FermionGrid());
   result_MADWF = Zero();
 
   CGTimer.Start();
