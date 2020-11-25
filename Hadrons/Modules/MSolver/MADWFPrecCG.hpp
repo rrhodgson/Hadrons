@@ -208,7 +208,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
 
 bool load_config = true;
-std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
+// std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 
 
 double mass = 0.01;
@@ -260,18 +260,20 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   LatticeFermionD result_outer(FGrid_outer);
   result_outer = Zero();
-  LatticeGaugeFieldD Umu(UGrid);
 
-  if(load_config){
-    FieldMetaData header;
-    NerscIO::readConfiguration(Umu, header, config_file);
+  LatticeGaugeFieldD& Umu = U;
+  // LatticeGaugeFieldD Umu(UGrid);
 
-    for(int i=0;i<Nd;i++){
-      assert(header.dimension[i] == GridDefaultLatt()[i]);
-    }
-  }else{    
-    SU<Nc>::HotConfiguration(RNG4, Umu);
-  }
+  // if(load_config){
+  //   FieldMetaData header;
+  //   NerscIO::readConfiguration(Umu, header, config_file);
+
+  //   for(int i=0;i<Nd;i++){
+  //     assert(header.dimension[i] == GridDefaultLatt()[i]);
+  //   }
+  // }else{    
+  //   SU<Nc>::HotConfiguration(RNG4, Umu);
+  // }
     
   std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
             << "   Ls: " << Ls_outer << std::endl;
@@ -482,7 +484,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::execute(void)
 {
 
-
+/*
 bool load_config = true;
 std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 
@@ -639,7 +641,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
   D_outer.Report();
-
+*/
 }
 
 END_MODULE_NAMESPACE
