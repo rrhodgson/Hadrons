@@ -195,60 +195,17 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
 
 
+double resid_outer = residual;
+double resid_inner = residual;
 
 
 
+MobiusFermionD D_outer_loc(D_outer);
+ZMobiusFermionD D_inner_loc(D_inner);
 
-
-
-
-
-
-
-
-
-
-bool load_config = true;
-std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
-
-
-double mass = 0.01;
-
-double b_plus_c_inner = 1.0;
-int Ls_inner = 10;
-
-double b_plus_c_outer = 2.0;
-int Ls_outer = 24;
-
-double lambda_max = 1.42;
-
-double resid_outer = 1e-8;
-double resid_inner = 1e-8;
-
-    RealD bmc = 1.0; //use Shamir kernel
-  std::vector<ComplexD> gamma_inner;
-
-  std::cout << "Compute parameters" << std::endl;
-Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
-// Approx::computeZmobiusOmega(gamma_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
-  
-  std::cout << "gamma:\n";
-  for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
 
 
   LatticeGaugeFieldD Umu(U);
-
-  // GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
-  //     GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
-  //     GridDefaultMpi());
-  // GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
-
-
-  // GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
-  // GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
-
-  // GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
-  // GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
 
 
   std::vector<int> seeds4({1, 2, 3, 4});
@@ -258,32 +215,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   LatticeFermionD src4(Umu.Grid()); random(RNG4,src4);
 
-
-  // if(load_config){
-  //   FieldMetaData header;
-  //   NerscIO::readConfiguration(Umu, header, config_file);
-
-  //   for(int i=0;i<Nd;i++){
-  //     assert(header.dimension[i] == GridDefaultLatt()[i]);
-  //   }
-  // }else{    
-  //   SU<Nc>::HotConfiguration(RNG4, Umu);
-  // }
-    
-  std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
-            << "   Ls: " << Ls_outer << std::endl;
-
-  RealD M5 = 1.8;
-
-  RealD b_outer = (b_plus_c_outer + bmc)/2.;
-  RealD c_outer = (b_plus_c_outer - bmc)/2.;
-
-  RealD b_inner = (b_plus_c_inner + bmc)/2.;
-  RealD c_inner = (b_plus_c_inner - bmc)/2.;
-
-  // MobiusFermionD D_outer_loc(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
-  // ZMobiusFermionD D_inner_loc(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
-
+  
   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
   //M y = x
   //Mprec y'_o = x'_o     where Mprec = Doo - Doe Dee^-1 Deo    and  x'_o = -Doe Dee^-1 x_e + x_o
@@ -308,7 +240,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
 
   ZeroGuesser<LatticeFermion> Guess;
-  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
+  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   
 
   LatticeFermionD result_MADWF(omat.FermionGrid());
@@ -327,7 +259,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
-  D_outer.Report();
+  D_outer_loc.Report();
 
 
 
