@@ -229,9 +229,10 @@ double resid_inner = 1e-8;
   std::vector<ComplexD> gamma_inner;
 
   std::cout << "Compute parameters" << std::endl;
-Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+// Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+Approx::computeZmobiusOmega(gamma_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
   
-  std::cout << "gamma:\n";
+  std::cout << "omega:\n";
   for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
 
 
