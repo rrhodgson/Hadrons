@@ -215,7 +215,7 @@ std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_C
 double mass = 0.01;
 
 double b_plus_c_inner = 1.0;
-int Ls_inner = 12;
+int Ls_inner = 10;
 
 double b_plus_c_outer = 2.0;
 int Ls_outer = 24;
@@ -229,41 +229,35 @@ double resid_inner = 1e-8;
   std::vector<ComplexD> gamma_inner;
 
   std::cout << "Compute parameters" << std::endl;
-// Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
-Approx::computeZmobiusOmega(gamma_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
+// Approx::computeZmobiusOmega(gamma_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
   
-  std::cout << "omega:\n";
+  std::cout << "gamma:\n";
   for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
 
 
   LatticeGaugeFieldD Umu(U);
 
-  GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
-      GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
-      GridDefaultMpi());
-  GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
+  // GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
+  //     GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
+  //     GridDefaultMpi());
+  // GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
 
 
-  GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
-  GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
+  // GridCartesian* FGrid_outer = SpaceTimeGrid::makeFiveDimGrid(Ls_outer, UGrid);
+  // GridCartesian* FGrid_inner = SpaceTimeGrid::makeFiveDimGrid(Ls_inner, UGrid);
 
-  GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
-  GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
+  // GridRedBlackCartesian* FrbGrid_outer = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_outer, UGrid);
+  // GridRedBlackCartesian* FrbGrid_inner = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls_inner, UGrid);
 
 
   std::vector<int> seeds4({1, 2, 3, 4});
-  std::vector<int> seeds5({5, 6, 7, 8});
-
-  GridParallelRNG RNG5_outer(FGrid_outer);
-  RNG5_outer.SeedFixedIntegers(seeds5);
 
   GridParallelRNG RNG4(Umu.Grid());
   RNG4.SeedFixedIntegers(seeds4);
 
   LatticeFermionD src4(Umu.Grid()); random(RNG4,src4);
 
-  LatticeFermionD result_outer(FGrid_outer);
-  result_outer = Zero();
 
   // if(load_config){
   //   FieldMetaData header;
@@ -324,7 +318,7 @@ Approx::computeZmobiusOmega(gamma_inner, Ls_inner, b_plus_c_outer, Ls_outer, lam
   madwf(src4, result_MADWF);
   CGTimer.Stop();
 
-  LatticeFermionD result_o_MADWF(FrbGrid_outer);
+  LatticeFermionD result_o_MADWF(omat.FermionRedBlackGrid());
   pickCheckerboard(Odd, result_o_MADWF, result_MADWF);
 
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
@@ -492,7 +486,7 @@ std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_C
 double mass = 0.01;
 
 double b_plus_c_inner = 1.0;
-int Ls_inner = 12;
+int Ls_inner = 10;
 
 double b_plus_c_outer = 2.0;
 int Ls_outer = 24;
