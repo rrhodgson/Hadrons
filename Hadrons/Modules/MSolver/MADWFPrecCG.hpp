@@ -235,6 +235,8 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
 
 
+  LatticeGaugeFieldD Umu(U);
+
   GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
       GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
       GridDefaultMpi());
@@ -254,25 +256,24 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   GridParallelRNG RNG5_outer(FGrid_outer);
   RNG5_outer.SeedFixedIntegers(seeds5);
 
-  GridParallelRNG RNG4(UGrid);
+  GridParallelRNG RNG4(Umu.Grid());
   RNG4.SeedFixedIntegers(seeds4);
 
-  LatticeFermionD src4(UGrid); random(RNG4,src4);
+  LatticeFermionD src4(Umu.Grid()); random(RNG4,src4);
 
   LatticeFermionD result_outer(FGrid_outer);
   result_outer = Zero();
-  LatticeGaugeFieldD Umu(UGrid);
 
-  if(load_config){
-    FieldMetaData header;
-    NerscIO::readConfiguration(Umu, header, config_file);
+  // if(load_config){
+  //   FieldMetaData header;
+  //   NerscIO::readConfiguration(Umu, header, config_file);
 
-    for(int i=0;i<Nd;i++){
-      assert(header.dimension[i] == GridDefaultLatt()[i]);
-    }
-  }else{    
-    SU<Nc>::HotConfiguration(RNG4, Umu);
-  }
+  //   for(int i=0;i<Nd;i++){
+  //     assert(header.dimension[i] == GridDefaultLatt()[i]);
+  //   }
+  // }else{    
+  //   SU<Nc>::HotConfiguration(RNG4, Umu);
+  // }
     
   std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
             << "   Ls: " << Ls_outer << std::endl;
