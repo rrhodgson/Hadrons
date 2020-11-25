@@ -282,7 +282,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
 
 
-            D_outer_loc.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
+            // D_outer_loc.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
             // D_outer.ImportUnphysicalFermion(source,src4);
             // src4 = source;
 
