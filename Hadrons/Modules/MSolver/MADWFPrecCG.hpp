@@ -207,6 +207,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
 
 
+
 bool load_config = true;
 std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 
@@ -224,18 +225,7 @@ double lambda_max = 1.42;
 double resid_outer = 1e-8;
 double resid_inner = 1e-8;
 
-
-  RealD M5 = 1.8;
-
-
     RealD bmc = 1.0; //use Shamir kernel
-
-  RealD b_outer = (b_plus_c_outer + bmc)/2.;
-  RealD c_outer = (b_plus_c_outer - bmc)/2.;
-
-  RealD b_inner = (b_plus_c_inner + bmc)/2.;
-  RealD c_inner = (b_plus_c_inner - bmc)/2.;
-
   std::vector<ComplexD> gamma_inner;
 
   std::cout << "Compute parameters" << std::endl;
@@ -244,9 +234,6 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   std::cout << "gamma:\n";
   for(int s=0;s<Ls_inner;s++) std::cout << s << " " << gamma_inner[s] << std::endl;
 
-
-
-  // LatticeGaugeFieldD& Umu = U;
 
   GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
       GridDefaultLatt(), GridDefaultSimd(Nd, vComplexD::Nsimd()),
@@ -274,7 +261,6 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   LatticeFermionD result_outer(FGrid_outer);
   result_outer = Zero();
-
   LatticeGaugeFieldD Umu(UGrid);
 
   if(load_config){
@@ -291,10 +277,16 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   std::cout << GridLogMessage << "Lattice dimensions: " << GridDefaultLatt()
             << "   Ls: " << Ls_outer << std::endl;
 
+  RealD M5 = 1.8;
 
-  MobiusFermionD D_outer_loc(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
-  ZMobiusFermionD D_inner_loc(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
+  RealD b_outer = (b_plus_c_outer + bmc)/2.;
+  RealD c_outer = (b_plus_c_outer - bmc)/2.;
 
+  RealD b_inner = (b_plus_c_inner + bmc)/2.;
+  RealD c_inner = (b_plus_c_inner - bmc)/2.;
+
+  MobiusFermionD D_outer(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
+  ZMobiusFermionD D_inner(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
 
   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
   //M y = x
@@ -309,7 +301,6 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   GridStopWatch CGTimer;
 
-  //Solve for y using MADWF with internal preconditioning
 
   typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
   PVtype PV_outer(Umu, CG_outer);
@@ -321,7 +312,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
   SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
 
   ZeroGuesser<LatticeFermion> Guess;
-  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
+  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   
 
   LatticeFermionD result_MADWF(FGrid_outer);
@@ -336,6 +327,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
             << std::endl;
+
 
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
@@ -490,7 +482,7 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::execute(void)
 {
 
-/*
+
 bool load_config = true;
 std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 
@@ -647,7 +639,7 @@ Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_oute
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
   D_outer.Report();
-*/
+
 }
 
 END_MODULE_NAMESPACE
