@@ -278,7 +278,10 @@ double resid_inner = residual;
   SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
 
   ZeroGuesser<LatticeFermion> Guess;
-  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 10, &update);
+  // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > 
+  //               madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 10, &update);
+  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> >  
+                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 10, &update);
   
 
   LatticeFermionD result_MADWF(omat.FermionGrid());
