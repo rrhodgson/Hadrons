@@ -478,16 +478,29 @@ double resid_inner = 1e-8;
 
   std::cout << "Accept parameters" << std::endl;
 
-        gamma_inner.push_back(ComplexD(1.458064389850479e+00,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(1.182313183893475e+00,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(8.309511666859551e-01,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(5.423524091567911e-01,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(3.419850204537295e-01,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(2.113790261902896e-01,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(1.260742995029118e-01,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(9.901366519626265e-02,-0.000000000000000e+00));
-        gamma_inner.push_back(ComplexD(6.863249884465925e-02,5.506585308274019e-02));
-        gamma_inner.push_back(ComplexD(6.863249884465925e-02,-5.506585308274019e-02));
+    // For 24^3 w/ deflation
+    gamma_inner.push_back(ComplexD(1.37479,-0));
+    gamma_inner.push_back(ComplexD(0.881822,-0));
+    gamma_inner.push_back(ComplexD(0.41314,-0));
+    gamma_inner.push_back(ComplexD(0.168173,0.0211327));
+    gamma_inner.push_back(ComplexD(0.114855,0.100897));
+    gamma_inner.push_back(ComplexD(0.114855,-0.100897));
+    gamma_inner.push_back(ComplexD(0.168173,-0.0211327));
+    gamma_inner.push_back(ComplexD(0.269661,-0));
+    gamma_inner.push_back(ComplexD(0.615657,-0));
+    gamma_inner.push_back(ComplexD(1.17883,-0));
+
+    // // For 16^3 or 48^3 w/ no deflation
+    // gamma_inner.push_back(ComplexD(1.458064389850479e+00,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(1.182313183893475e+00,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(8.309511666859551e-01,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(5.423524091567911e-01,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(3.419850204537295e-01,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(2.113790261902896e-01,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(1.260742995029118e-01,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(9.901366519626265e-02,-0.000000000000000e+00));
+    // gamma_inner.push_back(ComplexD(6.863249884465925e-02,5.506585308274019e-02));
+    // gamma_inner.push_back(ComplexD(6.863249884465925e-02,-5.506585308274019e-02));
 
   
   std::cout << "gamma:\n";
