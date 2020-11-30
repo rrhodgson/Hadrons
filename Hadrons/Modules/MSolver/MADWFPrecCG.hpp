@@ -183,20 +183,11 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     MobiusFermionD &D_outer  = envGetDerived(FMatOuter,MobiusFermionD,par().outerAction);
     ZMobiusFermionD &D_inner = envGetDerived(FMatInner,ZMobiusFermionD,par().innerAction);
 
-    // auto &g4   = *envGetGrid(FImplOuter::FermionField);
-    // auto &grb4 = *envGetRbGrid(FImplOuter::FermionField);
-    // auto &g5   = *envGetGrid(FImplOuter::FermionField, Ls_outer);
-    // auto &grb5 = *envGetRbGrid(FImplOuter::FermionField, Ls_outer);
-
-
-
-    // auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
-
     double residual = par().residual;
 
-    auto makeSolver = [&D_outer, &D_inner, &omat, &Umu, residual, this] (bool subGuess) mutable
+    auto makeSolver = [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu, residual, this] (bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &omat, &Umu, subGuess, residual, this]
+        return [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu, subGuess, residual, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
 
@@ -204,12 +195,12 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     auto &g4   = *envGetGrid(FImplOuter::FermionField);
     auto &grb4 = *envGetRbGrid(FImplOuter::FermionField);
 
-    auto &g5_outer   = *envGetGrid(FImplOuter::FermionField, 24);
-    auto &grb5_outer = *envGetRbGrid(FImplOuter::FermionField, 24);
+    auto &g5_outer   = *envGetGrid(FImplOuter::FermionField, Ls_outer);
+    auto &grb5_outer = *envGetRbGrid(FImplOuter::FermionField, Ls_outer);
     MobiusFermionD D_outer_loc(Umu, g5_outer, grb5_outer, g4, grb4, D_outer.mass, 1.8, D_outer._b, D_outer._c);
 
-    auto &g5_inner   = *envGetGrid(FImplInner::FermionField, 10);
-    auto &grb5_inner = *envGetRbGrid(FImplInner::FermionField, 10);
+    auto &g5_inner   = *envGetGrid(FImplInner::FermionField, Ls_inner);
+    auto &grb5_inner = *envGetRbGrid(FImplInner::FermionField, Ls_inner);
     std::vector<ComplexD> gamma(D_inner._gamma.size());
     for (int i=0; i<D_inner._gamma.size(); i++)
         gamma[i] = D_inner._gamma[i];
@@ -218,44 +209,19 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
 
 
-std::cout << "mass = " << D_inner_loc.mass << std::endl;
-  std::cout << "b = " << D_inner_loc._b << std::endl;
-  std::cout << "c = " << D_inner_loc._c << std::endl;
-  std::cout << "_zolo_hi = " << D_inner_loc._zolo_hi << std::endl;
-  std::cout << "gamma = " << std::endl;
-  for (int i=0; i<D_inner_loc._gamma.size(); i++) {
-    std::cout << "\t" << D_inner_loc._gamma[i] << std::endl;
-  }
-  std::cout << "omega = " << std::endl;
-  for (int i=0; i<D_inner_loc.omega.size(); i++) {
-    std::cout << "\t" << D_inner_loc.omega[i] << std::endl;
-  }
-    std::cout << "bs = " << std::endl;
-  for (int i=0; i<D_inner_loc.bs.size(); i++) {
-    std::cout << "\t" << D_inner_loc.bs[i] << std::endl;
-  }
-  std::cout << "cs = " << std::endl;
-  for (int i=0; i<D_inner_loc.cs.size(); i++) {
-    std::cout << "\t" << D_inner_loc.cs[i] << std::endl;
-  }
-  std::cout << "as = " << std::endl;
-  for (int i=0; i<D_inner_loc.as.size(); i++) {
-    std::cout << "\t" << D_inner_loc.as[i] << std::endl;
-  }
-
-
 double resid_outer = residual;
 double resid_inner = residual;
 
 
-  std::vector<int> seeds4({1, 2, 3, 4});
+  // std::vector<int> seeds4({1, 2, 3, 4});
 
-  GridParallelRNG RNG4(Umu.Grid());
-  RNG4.SeedFixedIntegers(seeds4);
+  // GridParallelRNG RNG4(Umu.Grid());
+  // RNG4.SeedFixedIntegers(seeds4);
 
-  LatticeFermionD src4(Umu.Grid()); random(RNG4,src4);
+  LatticeFermionD src4(Umu.Grid());
+  //random(RNG4,src4);
+  D_outer_loc.ExportPhysicalFermionSource(source,src4);
 
-// SU<Nc>::ColdConfiguration(RNG4, Umu); // Unit Gauge
   
   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
   //M y = x
@@ -282,9 +248,9 @@ double resid_inner = residual;
 
   ZeroGuesser<LatticeFermion> Guess;
   // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > 
-  //               madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 10, &update);
+  //               madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> >  
-                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 10, &update);
+                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 100, &update);
   
 
   LatticeFermionD result_MADWF(omat.FermionGrid());
@@ -294,100 +260,15 @@ double resid_inner = residual;
   madwf(src4, result_MADWF);
   CGTimer.Stop();
 
-  LatticeFermionD result_o_MADWF(omat.FermionRedBlackGrid());
-  pickCheckerboard(Odd, result_o_MADWF, result_MADWF);
-
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
             << std::endl;
-
 
 
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
   D_outer_loc.Report();
 
+    sol = result_MADWF;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            // std::cout << "Setup lattices" << std::endl;
-
-            // LatticeGaugeFieldD Umu(U);
-
-            // LatticeFermionD src_outer(source.Grid());
-
-            // LatticeFermionD src4(U.Grid()); // TODO: Get this from source
-            // GridParallelRNG RNG4(U.Grid());
-            // std::vector<int> seeds4({1, 2, 3, 4});
-            // RNG4.SeedFixedIntegers(seeds4);
-            // random(RNG4,src4)
-
-
-            // // D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_-
-            // // D_outer.ImportUnphysicalFermion(source,src4);
-            // // src4 = source;
-
-            // LatticeFermionD result_MADWF(source.Grid());
-            // result_MADWF = Zero();
-
-
-            // std::cout << "Setup CG and solvers" << std::endl;
-
-            // ConjugateGradient<LatticeFermionD> CG_outer(residual, 10000);
-            // ConjugateGradient<LatticeFermionD> CG_inner(residual, 10000, 0);
-            // CGincreaseTol update(CG_inner, residual);
-
-            // typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
-            // PVtype PV_outer(Umu, CG_outer);
-
-            // typedef SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolverType;
-            // SchurSolverType SchurSolver_inner(CG_inner);
-
-
-            // std::cout << "Setup MADWF" << std::endl;
-
-            // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurSolverType, LinearFunction<LatticeFermion> > 
-            //         madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, residual, 100, &update);
-
-
-            // std::cout << "Run MADWF" << std::endl;
-
-            // madwf(src4, result_MADWF);
-
-            // sol = result_MADWF;
 
 
         };
@@ -403,57 +284,12 @@ double resid_inner = residual;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // execution ///////////////////////////////////////////////////////////////////
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
 void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::execute(void)
 {
-
+/*
 std::string config_file = par().gaugefile; //"/home/dp008/dp008/dc-hodg1/Gauge_Confs/16^3/ckpoint_lat.IEEE64BIG.1100";
 bool load_config = true;
 if (config_file.empty())
@@ -462,10 +298,10 @@ if (config_file.empty())
 double mass = 0.01;
 
 double b_plus_c_inner = 1.0;
-int Ls_inner = 10;
+int Ls_inner = 24;
 
 double b_plus_c_outer = 2.0;
-int Ls_outer = 24;
+int Ls_outer = 10;
 
 double lambda_max = 1.42;
 
@@ -479,31 +315,39 @@ double resid_inner = 1e-8;
 // Approx::computeZmobiusGamma(gamma_inner, b_plus_c_inner, Ls_inner, b_plus_c_outer, Ls_outer, lambda_max);
 
 
-  std::cout << "Accept parameters" << std::endl;
+  // std::cout << "Accept parameters" << std::endl;
 
     // For 24^3 w/ deflation
-    gamma_inner.push_back(ComplexD(1.37479,-0));
-    gamma_inner.push_back(ComplexD(0.881822,-0));
-    gamma_inner.push_back(ComplexD(0.41314,-0));
-    gamma_inner.push_back(ComplexD(0.168173,0.0211327));
-    gamma_inner.push_back(ComplexD(0.114855,0.100897));
-    gamma_inner.push_back(ComplexD(0.114855,-0.100897));
-    gamma_inner.push_back(ComplexD(0.168173,-0.0211327));
-    gamma_inner.push_back(ComplexD(0.269661,-0));
-    gamma_inner.push_back(ComplexD(0.615657,-0));
-    gamma_inner.push_back(ComplexD(1.17883,-0));
+    // gamma_inner.push_back(ComplexD(1.38355,-0));
+    // gamma_inner.push_back(ComplexD(1.15775,-0));
+    // gamma_inner.push_back(ComplexD(0.791841,-0));
+    // gamma_inner.push_back(ComplexD(0.491647,-0));
+    // gamma_inner.push_back(ComplexD(0.289819,-0));
+    // gamma_inner.push_back(ComplexD(0.1744,0.0227481));
+    // gamma_inner.push_back(ComplexD(0.145524,0.0736917));
+    // gamma_inner.push_back(ComplexD(0.0984094,0.13761));
+    // gamma_inner.push_back(ComplexD(0.0984094,-0.13761));
+    // gamma_inner.push_back(ComplexD(0.145524,-0.0736917));
+    // gamma_inner.push_back(ComplexD(0.1744,-0.0227481));
+    // gamma_inner.push_back(ComplexD(0.218611,-0));
+    // gamma_inner.push_back(ComplexD(0.379624,-0));
+    // gamma_inner.push_back(ComplexD(0.628981,-0));
+    // gamma_inner.push_back(ComplexD(0.97407,-0));
+    // gamma_inner.push_back(ComplexD(1.33346,-0));
+
+
 
     // // For 16^3 or 48^3 w/ no deflation
-    // gamma_inner.push_back(ComplexD(1.458064389850479e+00,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(1.182313183893475e+00,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(8.309511666859551e-01,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(5.423524091567911e-01,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(3.419850204537295e-01,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(2.113790261902896e-01,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(1.260742995029118e-01,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(9.901366519626265e-02,-0.000000000000000e+00));
-    // gamma_inner.push_back(ComplexD(6.863249884465925e-02,5.506585308274019e-02));
-    // gamma_inner.push_back(ComplexD(6.863249884465925e-02,-5.506585308274019e-02));
+    gamma_inner.push_back(ComplexD(1.458064389850479e+00,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(1.182313183893475e+00,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(8.309511666859551e-01,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(5.423524091567911e-01,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(3.419850204537295e-01,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(2.113790261902896e-01,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(1.260742995029118e-01,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(9.901366519626265e-02,-0.000000000000000e+00));
+    gamma_inner.push_back(ComplexD(6.863249884465925e-02,5.506585308274019e-02));
+    gamma_inner.push_back(ComplexD(6.863249884465925e-02,-5.506585308274019e-02));
 
   
   std::cout << "gamma:\n";
@@ -536,8 +380,6 @@ double resid_inner = 1e-8;
   LatticeFermionD src4(UGrid); random(RNG4,src4);
 
 
-  // std::cout << src4 << std::endl;
-
   LatticeFermionD result_outer(FGrid_outer);
   result_outer = Zero();
   LatticeGaugeFieldD Umu(UGrid);
@@ -568,30 +410,6 @@ double resid_inner = 1e-8;
   MobiusFermionD D_outer(Umu, *FGrid_outer, *FrbGrid_outer, *UGrid, *UrbGrid, mass, M5, b_outer, c_outer);
   ZMobiusFermionD D_inner(Umu, *FGrid_inner, *FrbGrid_inner, *UGrid, *UrbGrid, mass, M5, gamma_inner, b_inner, c_inner);
 
-  std::cout << "mass = " << D_inner.mass << std::endl;
-  std::cout << "b = " << D_inner._b << std::endl;
-  std::cout << "c = " << D_inner._c << std::endl;
-  std::cout << "_zolo_hi = " << D_inner._zolo_hi << std::endl;
-  std::cout << "gamma = " << std::endl;
-  for (int i=0; i<D_inner._gamma.size(); i++) {
-    std::cout << "\t" << D_inner._gamma[i] << std::endl;
-  }
-  std::cout << "omega = " << std::endl;
-  for (int i=0; i<D_inner.omega.size(); i++) {
-    std::cout << "\t" << D_inner.omega[i] << std::endl;
-  }
-  std::cout << "bs = " << std::endl;
-  for (int i=0; i<D_inner.bs.size(); i++) {
-    std::cout << "\t" << D_inner.bs[i] << std::endl;
-  }
-  std::cout << "cs = " << std::endl;
-  for (int i=0; i<D_inner.cs.size(); i++) {
-    std::cout << "\t" << D_inner.cs[i] << std::endl;
-  }
-  std::cout << "as = " << std::endl;
-  for (int i=0; i<D_inner.as.size(); i++) {
-    std::cout << "\t" << D_inner.as[i] << std::endl;
-  }
 
   // LatticeFermionD src_outer(FGrid_outer);
   // D_outer.ImportPhysicalFermionSource(src4,src_outer); //applies D_- 
@@ -606,33 +424,9 @@ double resid_inner = 1e-8;
 
   //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
   ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, 10000);
-  // SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_outer(CG_outer);
-  
-  // LatticeFermionD tmp_e_outer(FrbGrid_outer);
-  // LatticeFermionD src_o_outer(FrbGrid_outer);
-  // SchurSolver_outer.RedBlackSource(D_outer, src_outer, tmp_e_outer, src_o_outer);
-  
-  // LatticeFermionD result_o_outer(FrbGrid_outer);
-  // result_o_outer = Zero();
 
   GridStopWatch CGTimer;
   
-  // SchurDiagTwoOperator<MobiusFermionD, LatticeFermionD> HermOpEO_outer(D_outer);
-
-  // CGTimer.Start();
-  // CG_outer(HermOpEO_outer, src_o_outer, result_o_outer);
-  // CGTimer.Stop();
-
-  // std::cout << GridLogMessage << "Total outer CG time : " << CGTimer.Elapsed()
-  //           << std::endl;
-
-  // CGTimer.Reset();
-
-  //Solve for y using MADWF with internal preconditioning
-
-  //typedef PauliVillarsSolverRBprec<LatticeFermionD, typename RunParamsOuter::SchurSolverType> PVtype;
-  //PVtype PV_outer(SchurSolver_outer);
-
   typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
   PVtype PV_outer(Umu, CG_outer);
 
@@ -645,9 +439,6 @@ double resid_inner = 1e-8;
   ZeroGuesser<LatticeFermion> Guess;
   MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   
-  // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> > madwf(D_outer, D_inner, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 100, &update);
-
-
   LatticeFermionD result_MADWF(FGrid_outer);
   result_MADWF = Zero();
 
@@ -661,15 +452,9 @@ double resid_inner = 1e-8;
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
             << std::endl;
 
-  // LatticeFermionD diff = result_o_MADWF - result_o_outer;
-  // std::cout <<GridLogMessage<< "Odd-parity MADWF result norm " << norm2(result_o_MADWF) 
-  //       << " Regular result norm " << norm2(result_o_outer) 
-  //       << " Norm of diff " << norm2(diff)<<std::endl;
-
-
   std::cout << GridLogMessage << "######## Dhop calls summary" << std::endl;
   D_outer.Report();
-
+*/
 }
 
 END_MODULE_NAMESPACE
