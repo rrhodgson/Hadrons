@@ -51,8 +51,7 @@ public:
                                     unsigned int, maxOuterIteration,
                                     double      , residual,
                                     std::string , eigenPack,
-                                    std::string , gauge,
-                                    std::string , gaugefile);
+                                    std::string , gauge);
 };
 
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
