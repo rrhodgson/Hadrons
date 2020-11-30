@@ -231,7 +231,7 @@ double resid_inner = residual;
   //y'_o = (Mprec^dag Mprec)^-1 Mprec^dag x'_o 
 
   //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
-  ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, 10000);
+  ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, par().maxInnerIteration);
 
   GridStopWatch CGTimer;
 
@@ -239,7 +239,7 @@ double resid_inner = residual;
   typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
   PVtype PV_outer(Umu, CG_outer);
 
-  ConjugateGradient<LatticeFermionD> CG_inner(resid_inner, 10000, 0);
+  ConjugateGradient<LatticeFermionD> CG_inner(resid_inner, par().maxInnerIteration, 0);
 
   CGincreaseTol update(CG_inner, resid_outer);
 
@@ -249,7 +249,7 @@ double resid_inner = residual;
   // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > 
   //               madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
   MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> >  
-                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, 100, &update);
+                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, par().maxOuterIteration, &update);
   
 
   LatticeFermionD result_MADWF(omat.FermionGrid());
