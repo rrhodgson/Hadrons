@@ -190,13 +190,13 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 
 
 
-    auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
+    // auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
 
     double residual = par().residual;
 
-    auto makeSolver = [&D_outer, &D_inner, &omat, &Umu, guesserPt, residual, this] (bool subGuess) mutable
+    auto makeSolver = [&D_outer, &D_inner, &omat, &Umu, residual, this] (bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &omat, &Umu, guesserPt, subGuess, residual, this]
+        return [&D_outer, &D_inner, &omat, &Umu, subGuess, residual, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
 
@@ -214,6 +214,9 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     for (int i=0; i<D_inner._gamma.size(); i++)
         gamma[i] = D_inner._gamma[i];
     ZMobiusFermionD D_inner_loc(Umu, g5_inner, grb5_inner, g4, grb4, D_inner.mass, 1.8, gamma, D_inner._b, D_inner._c);
+
+    auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
+
 
 std::cout << "mass = " << D_inner_loc.mass << std::endl;
   std::cout << "b = " << D_inner_loc._b << std::endl;
