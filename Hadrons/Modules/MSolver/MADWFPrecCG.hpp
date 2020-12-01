@@ -51,7 +51,8 @@ public:
                                     unsigned int, maxOuterIteration,
                                     double      , residual,
                                     std::string , eigenPack,
-                                    std::string , gauge);
+                                    std::string , gaugeOuter,
+                                    std::string , gaugeInner);
 };
 
 template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
@@ -61,7 +62,7 @@ public:
     FERM_TYPE_ALIASES(FImplInner, Inner);
     FERM_TYPE_ALIASES(FImplOuter, Outer);
     SOLVER_TYPE_ALIASES(FImplOuter,);
-    GAUGE_TYPE_ALIASES(GImpl,);
+    // GAUGE_TYPE_ALIASES(GImpl,);
     typedef HADRONS_DEFAULT_SCHUR_OP<FMatInner, FermionFieldInner> SchurFMatInner;
     typedef HADRONS_DEFAULT_SCHUR_OP<FMatOuter, FermionFieldOuter> SchurFMatOuter;
 private:
@@ -95,9 +96,8 @@ public:
     virtual void execute(void);
 };
 
-// MODULE_REGISTER_TMP(MADWFPrecCG, 
-    // ARG(TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
-MODULE_REGISTER_TMP(ZMADWFPrecCG, ARG(TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>), MSolver);
+// MODULE_REGISTER_TMP(MADWFCG, ARG(TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>), MSolver);
+MODULE_REGISTER_TMP(MixedPrecMADWFCG, ARG(TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>), MSolver);
 
 /******************************************************************************
  *                 TMADWFPrecCG implementation                             *
@@ -123,7 +123,7 @@ template <typename FImplInner, typename FImplOuter, int nBasis, typename GImpl>
 std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 ::getReference(void)
 {
-    std::vector<std::string> ref = {par().innerAction, par().outerAction, par().gauge};
+    std::vector<std::string> ref = {par().innerAction, par().outerAction, par().gaugeInner, par().gaugeOuter};
     
     if (!par().eigenPack.empty())
     {
@@ -143,10 +143,10 @@ std::vector<std::string> TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
 }
 
 struct CGincreaseTol : public MADWFinnerIterCallbackBase{
-  ConjugateGradient<LatticeFermionD> &cg_inner;  
+  ConjugateGradient<LatticeFermionF> &cg_inner;  
   RealD outer_resid;
 
-  CGincreaseTol(ConjugateGradient<LatticeFermionD> &cg_inner,
+  CGincreaseTol(ConjugateGradient<LatticeFermionF> &cg_inner,
         RealD outer_resid): cg_inner(cg_inner), outer_resid(outer_resid){}
   
   void operator()(const RealD current_resid){
@@ -174,42 +174,51 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     auto Ls_outer        = env().getObjectLs(par().outerAction);
     auto Ls_inner        = env().getObjectLs(par().innerAction);
 
-    auto &Umu = envGet(GaugeField, par().gauge);
+    auto &UmuD = envGet(GaugeFieldOuter, par().gaugeOuter);
+    auto &UmuF = envGet(GaugeFieldInner, par().gaugeInner);
 
     auto &omat     = envGet(FMatOuter, par().outerAction);
     // auto &imat     = envGet(FMatInner, par().innerAction);
 
     MobiusFermionD &D_outer  = envGetDerived(FMatOuter,MobiusFermionD,par().outerAction);
-    ZMobiusFermionD &D_inner = envGetDerived(FMatInner,ZMobiusFermionD,par().innerAction);
+    ZMobiusFermionF &D_inner = envGetDerived(FMatInner,ZMobiusFermionF,par().innerAction);
 
     double residual = par().residual;
 
-    auto makeSolver = [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu, residual, this] (bool subGuess) mutable
+    auto makeSolver = [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &UmuD, &UmuF, residual, this] (bool subGuess) mutable
     {
-        return [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu, subGuess, residual, this]
+        return [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &UmuD, &UmuF, subGuess, residual, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
         {
 
+std::cout << "Setup Mob action" << std::endl;
 
-    auto &g4   = *envGetGrid(FImplOuter::FermionField);
-    auto &grb4 = *envGetRbGrid(FImplOuter::FermionField);
+    auto &g4_outer   = *envGetGrid(FImplOuter::FermionField);
+    auto &grb4_outer = *envGetRbGrid(FImplOuter::FermionField);
 
     auto &g5_outer   = *envGetGrid(FImplOuter::FermionField, Ls_outer);
     auto &grb5_outer = *envGetRbGrid(FImplOuter::FermionField, Ls_outer);
-    MobiusFermionD D_outer_loc(Umu, g5_outer, grb5_outer, g4, grb4, D_outer.mass, 1.8, D_outer._b, D_outer._c);
+    MobiusFermionD D_outer_loc(UmuD, g5_outer, grb5_outer, g4_outer, grb4_outer, D_outer.mass, 1.8, D_outer._b, D_outer._c);
+
+
+std::cout << "Setup zMob action" << std::endl;
+
+    auto &g4_inner   = *envGetGrid(FImplInner::FermionField);
+    auto &grb4_inner = *envGetRbGrid(FImplInner::FermionField);
 
     auto &g5_inner   = *envGetGrid(FImplInner::FermionField, Ls_inner);
     auto &grb5_inner = *envGetRbGrid(FImplInner::FermionField, Ls_inner);
     std::vector<ComplexD> gamma(D_inner._gamma.size());
     for (int i=0; i<D_inner._gamma.size(); i++)
         gamma[i] = D_inner._gamma[i];
-    ZMobiusFermionD D_inner_loc(Umu, g5_inner, grb5_inner, g4, grb4, D_inner.mass, 1.8, gamma, D_inner._b, D_inner._c);
-
-    auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack); 
+    ZMobiusFermionF D_inner_loc(UmuF, g5_inner, grb5_inner, g4_inner, grb4_inner, D_inner.mass, 1.8, gamma, D_inner._b, D_inner._c);
 
 
 double resid_outer = residual;
 double resid_inner = residual;
+
+
+std::cout << "Setup source" << std::endl;
 
 
   // std::vector<int> seeds4({1, 2, 3, 4});
@@ -217,7 +226,7 @@ double resid_inner = residual;
   // GridParallelRNG RNG4(Umu.Grid());
   // RNG4.SeedFixedIntegers(seeds4);
 
-  LatticeFermionD src4(Umu.Grid());
+  LatticeFermionD src4(UmuD.Grid());
   //random(RNG4,src4);
   D_outer_loc.ExportPhysicalFermionSource(source,src4);
 
@@ -230,6 +239,9 @@ double resid_inner = residual;
   //(Mprec^dag Mprec) y'_o = Mprec^dag x'_o 
   //y'_o = (Mprec^dag Mprec)^-1 Mprec^dag x'_o 
 
+
+std::cout << "Setup Solvers" << std::endl;
+
   //We can get Mprec^dag x'_o from x_o  from SchurRedBlackDiagMooeeSolve::RedBlackSource
   ConjugateGradient<LatticeFermionD> CG_outer(resid_outer, par().maxInnerIteration);
 
@@ -237,27 +249,39 @@ double resid_inner = residual;
 
 
   typedef PauliVillarsSolverFourierAccel<LatticeFermionD, LatticeGaugeFieldD> PVtype;
-  PVtype PV_outer(Umu, CG_outer);
+  PVtype PV_outer(UmuD, CG_outer);
 
-  ConjugateGradient<LatticeFermionD> CG_inner(resid_inner, par().maxInnerIteration, 0);
+  ConjugateGradient<LatticeFermionF> CG_inner(resid_inner, par().maxInnerIteration, 0);
 
   CGincreaseTol update(CG_inner, resid_outer);
 
-  SchurRedBlackDiagTwoSolve<LatticeFermionD> SchurSolver_inner(CG_inner);
+  SchurRedBlackDiagTwoSolve<LatticeFermionF> SchurSolver_inner(CG_inner);
 
-  ZeroGuesser<LatticeFermion> Guess;
-  // MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, ZeroGuesser<LatticeFermion> > 
-  //               madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, 100, &update);
-  MADWF<MobiusFermionD, ZMobiusFermionD, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionD>, LinearFunction<LatticeFermion> >  
-                madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, par().maxOuterIteration, &update);
-  
 
   LatticeFermionD result_MADWF(omat.FermionGrid());
   result_MADWF = Zero();
 
-  CGTimer.Start();
-  madwf(src4, result_MADWF);
-  CGTimer.Stop();
+
+std::cout << "Run MADWF" << std::endl;
+
+  if (par().eigenPack.empty()) {
+    ZeroGuesser<LatticeFermionF> Guess;
+    MADWF<MobiusFermionD, ZMobiusFermionF, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionF>, ZeroGuesser<LatticeFermionF> > 
+                  madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, Guess, resid_outer, par().maxOuterIteration, &update);
+
+    CGTimer.Start();
+    madwf(src4, result_MADWF);
+    CGTimer.Stop();
+  } else {
+    auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack);
+    MADWF<MobiusFermionD, ZMobiusFermionF, PVtype, SchurRedBlackDiagTwoSolve<LatticeFermionF>, LinearFunction<LatticeFermionF> >  
+                  madwf(D_outer_loc, D_inner_loc, PV_outer, SchurSolver_inner, *guesserPt, resid_outer, par().maxOuterIteration, &update);
+
+    CGTimer.Start();
+    madwf(src4, result_MADWF);
+    CGTimer.Stop();
+  }
+  
 
   std::cout << GridLogMessage << "Total MADWF time : " << CGTimer.Elapsed()
             << std::endl;

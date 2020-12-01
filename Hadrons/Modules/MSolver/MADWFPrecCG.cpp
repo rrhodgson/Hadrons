@@ -30,4 +30,5 @@ using namespace Hadrons;
 using namespace MSolver;
 
 // template class Grid::Hadrons::MSolver::TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>; // inner in single precision
-template class Grid::Hadrons::MSolver::TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>; // inner in double precision
+template class Grid::Hadrons::MSolver::TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>; // inner in double precision
+
