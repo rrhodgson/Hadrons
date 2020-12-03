@@ -32,4 +32,5 @@ using namespace MIO;
 template class Grid::Hadrons::MIO::TLoadEigenPack<FermionEigenPack<FIMPL>, GIMPL>;
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 template class Grid::Hadrons::MIO::TLoadEigenPack<FermionEigenPack<FIMPL, FIMPLF>, GIMPL>;
+template class Grid::Hadrons::MIO::TLoadEigenPack<FermionEigenPack<FIMPLF, FIMPLF>, GIMPLF>;
 #endif
