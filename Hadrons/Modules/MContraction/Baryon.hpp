@@ -326,7 +326,8 @@ void TBaryon<FImpl>::execute(void)
             std::string ns = vm().getModuleNamespace(env().getObjectModule(par().sinkq1));
             if (ns == "MSource")
             {
-                PropagatorField &sink = envGet(PropagatorField, par().sinkq1);
+                // PropagatorField &sink = envGet(PropagatorField, par().sinkq1);
+                PropagatorFieldScalar &sink = envGet(PropagatorFieldScalar, par().sinkq1);
 
                 if (par().trace) {
                     envGetTmp(LatticeComplex, c);
@@ -347,16 +348,18 @@ void TBaryon<FImpl>::execute(void)
                                                         wick_contractions,
                                                         cMat);
 
-                    auto sinkTr = closure(trace(sink));
+                    // auto sinkTr = closure(trace(sink));
 
-                    GridBase *grid = sink.Grid();
+                    // GridBase *grid = sink.Grid();
       
-                    autoView( vsinkTr, sinkTr, CpuRead);
-                    autoView( vcMat  , cMat  , CpuWrite);
+                    // autoView( vsinkTr, sinkTr, CpuRead);
+                    // autoView( vcMat  , cMat  , CpuWrite);
 
-                    accelerator_for(ss, grid->oSites(), grid->Nsimd(), {
-                        vcMat[ss] = vsinkTr[ss]*vcMat[ss]; 
-                    }  );//end loop over lattice sites
+                    // accelerator_for(ss, grid->oSites(), grid->Nsimd(), {
+                    //     vcMat[ss] = vsinkTr[ss]*vcMat[ss]; 
+                    // }  );//end loop over lattice sites
+
+                    cMat = cMat*sink;
 
                     sliceSum(cMat, bufMat, Tp);
                 }
