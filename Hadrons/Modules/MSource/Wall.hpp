@@ -121,7 +121,7 @@ void TWall<FImpl>::setup(void)
 {
     envCreateLat(PropagatorField, getName());
     envCache(Lattice<iScalar<vInteger>>, tName_, 1, envGetGrid(LatticeComplex));
-    envCacheLat(LatticeComplex, momphName_);
+    envTmpLat(LatticeComplex, "ph");
     envTmpLat(LatticeComplex, "coor");
 }
 
@@ -133,8 +133,8 @@ void TWall<FImpl>::execute(void)
                  << " with momentum " << par().mom << std::endl;
     
     auto  &src = envGet(PropagatorField, getName());
-    auto  &ph  = envGet(LatticeComplex, momphName_);
     auto  &t   = envGet(Lattice<iScalar<vInteger>>, tName_);
+    envGetTmp(LatticeComplex, ph);
     
     if (!hasPhase_)
     {
