@@ -186,6 +186,12 @@ void TMADWFPrecCG<FImplInner, FImplOuter, nBasis, GImpl>
     double residual = par().residual;
 
 
+    auto makeSolver = [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu_outer, &Umu_inner, residual, this] (bool subGuess) mutable
+    {
+        return [&D_outer, &D_inner, &omat, Ls_outer, Ls_inner, &Umu_outer, &Umu_inner, subGuess, residual, this]
+        (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
+        {
+
 std::cout << "Setup Mob action" << std::endl;
 
     auto &g4_outer   = *envGetGrid(FImplOuter::FermionField);
@@ -207,13 +213,6 @@ std::cout << "Setup zMob action" << std::endl;
     for (int i=0; i<D_inner._gamma.size(); i++)
         gamma[i] = D_inner._gamma[i];
     ZMobiusFermionD D_inner_loc(Umu_inner, g5_inner, grb5_inner, g4_inner, grb4_inner, D_inner.mass, 1.8, gamma, D_inner._b, D_inner._c);
-
-
-    auto makeSolver = [&D_outer_loc, &D_inner_loc, &omat, Ls_outer, Ls_inner, &Umu_outer, &Umu_inner, residual, this] (bool subGuess) mutable
-    {
-        return [&D_outer_loc, &D_inner_loc, &omat, Ls_outer, Ls_inner, &Umu_outer, &Umu_inner, subGuess, residual, this]
-        (FermionFieldOuter &sol, const FermionFieldOuter &source) mutable
-        {
 
 
 double resid_outer = residual;
