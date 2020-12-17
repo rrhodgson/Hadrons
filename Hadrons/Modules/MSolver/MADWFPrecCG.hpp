@@ -223,14 +223,14 @@ double resid_inner = residual;
 std::cout << "Setup source" << std::endl;
 
 
-  // std::vector<int> seeds4({1, 2, 3, 4});
+  std::vector<int> seeds4({1, 2, 3, 4});
 
-  // GridParallelRNG RNG4(Umu.Grid());
-  // RNG4.SeedFixedIntegers(seeds4);
+  GridParallelRNG RNG4(Umu_outer.Grid());
+  RNG4.SeedFixedIntegers(seeds4);
 
   LatticeFermionD src4(Umu_outer.Grid());
-  //random(RNG4,src4);
-  D_outer_loc.ExportPhysicalFermionSource(source,src4);
+  random(RNG4,src4);
+  // D_outer_loc.ExportPhysicalFermionSource(source,src4);
 
   
   //Solve using a regular even-odd preconditioned CG for the Hermitian operator
