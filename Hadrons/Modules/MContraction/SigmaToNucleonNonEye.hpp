@@ -92,8 +92,9 @@ class TSigmaToNucleonNonEye: public Module<SigmaToNucleonNonEyePar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
-    BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
-    SINK_TYPE_ALIASES(Scalar);
+    SINK_TYPE_ALIASES();
+    // BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
+    // SINK_TYPE_ALIASES(Scalar);
     typedef typename SpinMatrixField::vector_object::scalar_object SpinMatrix;
     class Metadata: Serializable
     {
@@ -190,11 +191,27 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
 
     auto &quTi      = envGet(PropagatorField, par().quTi);
     auto &quTf      = envGet(PropagatorField, par().quTf);
-    auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    // auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    auto &quSpec    = envGet(PropagatorField, par().quSpec);
     auto &qdTf      = envGet(PropagatorField, par().qdTf);
     auto &qsTi      = envGet(PropagatorField, par().qsTi);
-    auto qut         = quSpec[par().tf];
-    for (auto &G: Gamma::gall)
+
+    auto &sink      = envGet(SinkFn, par().sink);
+    SlicedPropagator quSpec_slice    = sink(quSpec);
+    auto qut         = quSpec_slice[par().tf];
+    // auto qut         = quSpec[par().tf];
+
+    const std::array<const Gamma, 8> g = {{
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5)}};
+
+    for (auto &G: g)
     {
       r.info.gammaH = G.g;
       //Operator Q1, equivalent to the two-trace case in the rare-kaons module
