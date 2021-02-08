@@ -181,7 +181,8 @@ void TGauss<FImpl>::execute(void)
     ScalarRho+=(i*(mom_.at(dim)*2*Pi/env().getDim(dim)))*component;
 
     //compute scalar result
-    ScalarRho=exp(ScalarRho)*Complex(std::pow(sqrt(2*Pi)*par().width,-dim));
+    // ScalarRho=exp(ScalarRho)*Complex(std::pow(sqrt(2*Pi)*par().width,-dim));
+    ScalarRho=exp(ScalarRho);
 
     //select time slices
     LatticeCoordinate(compHelper, dim);
