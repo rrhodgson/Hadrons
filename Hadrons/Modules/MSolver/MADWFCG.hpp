@@ -1,5 +1,5 @@
 /*
- * MADWFPrecCG.hpp, part of Hadrons (https://github.com/aportelli/Hadrons)
+ * MADWFCG.hpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
  * Copyright (C) 2015 - 2020
  *
@@ -36,7 +36,7 @@
 BEGIN_HADRONS_NAMESPACE
 
 /******************************************************************************
- *              Mixed precision schur red-black preconditioned CG             *
+ *                  MADWF schur red-black preconditioned CG                   *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MSolver)
 
@@ -177,7 +177,6 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
             MADWF<MobiusFermion<FImplOuter>, ZMobiusFermion<FImplInner>,
                   PVtype, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner>, 
                   LinearFunction<FermionFieldInner> >  
-              
               madwf(D_outer, D_inner,
                     PV_outer, SchurSolver_inner,
                     *guesserPt,
@@ -185,6 +184,14 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                     &update);
 
             madwf(source, sol);
+
+            // TODO: correction step
+            ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
+            HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
+            shur_correction(omat, source, sol);
+
+            // TODO: how to handle subguess?
+            // TODO: how to handle update?
 
         };
     };
@@ -200,8 +207,7 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
 template <typename FImplInner, typename FImplOuter, int nBasis>
 void TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::execute(void)
-{
-}
+{}
 
 END_MODULE_NAMESPACE
 
