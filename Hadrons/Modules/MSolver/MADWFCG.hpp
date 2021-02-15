@@ -183,12 +183,19 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                     par().residual, par().maxOuterIteration,
                     &update);
 
+            Message(LOG) << " ||source||^2 = " << norm2(source) << std::endl;
+            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
+
             madwf(source, sol);
+
+            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
             // TODO: correction step
             ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
             shur_correction(omat, source, sol);
+
+            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
             // TODO: how to handle subguess?
             // TODO: how to handle update?
