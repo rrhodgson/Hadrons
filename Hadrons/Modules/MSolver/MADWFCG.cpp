@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2015 - 2020
  *
- * Author: Antonin Portelli <antonin.portelli@me.com>
+ * Author: Raoul Hodgson <raoul.hodgson@ed.ac.uk>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,11 @@
  */
 
 /*  END LEGAL */
-#include <Hadrons/Modules/MSolver/MADWFPrecCG.hpp>
+#include <Hadrons/Modules/MSolver/MADWFCG.hpp>
 
 using namespace Grid;
 using namespace Hadrons;
 using namespace MSolver;
 
-// template class Grid::Hadrons::MSolver::TMADWFPrecCG<ZFIMPLF, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>; // inner in single precision
-template class Grid::Hadrons::MSolver::TMADWFPrecCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS, GIMPL>; // inner in double precision
+template class Grid::Hadrons::MSolver::TMADWFCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>;
 
