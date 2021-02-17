@@ -72,6 +72,8 @@ public:
     virtual void setup(void);
     // execution
     virtual void execute(void);
+private:
+    struct CGincreaseTol;
 };
 
 MODULE_REGISTER_TMP(MADWFCG, ARG(TMADWFCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
@@ -119,8 +121,11 @@ std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
     return out;
 }
 
-// Should this become part of the class?
-struct CGincreaseTol : public MADWFinnerIterCallbackBase{
+
+// TODO: make this part of the module class (public part)
+template <typename FImplInner, typename FImplOuter, int nBasis>
+struct TMADWFCG<FImplInner, FImplOuter, nBasis>
+::CGincreaseTol : public MADWFinnerIterCallbackBase{
   ConjugateGradient<LatticeFermionD> &cg_inner;  
   RealD outer_resid;
 
@@ -164,6 +169,10 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
         return [&D_outer, &D_inner, &omat, guesserPt, Ls_outer, Ls_inner, subGuess, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source)
         {
+            if (subGuess) {
+                HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented");
+            }
+
             ConjugateGradient<FermionFieldOuter> CG_PV(par().residual, par().maxInnerIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> Schur_PV(CG_PV);
             typedef PauliVillarsSolverRBprec<FermionFieldOuter, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter>> PVtype;
@@ -183,22 +192,19 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                     par().residual, par().maxOuterIteration,
                     &update);
 
-            Message(LOG) << " ||source||^2 = " << norm2(source) << std::endl;
-            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
+            LOG(Message) << " ||source||^2 = " << norm2(source) << std::endl;
+            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
             madwf(source, sol);
 
-            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
+            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
             // TODO: correction step
             ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
             shur_correction(omat, source, sol);
 
-            Message(LOG) << " ||sol||^2 = " << norm2(sol) << std::endl;
-
-            // TODO: how to handle subguess?
-            // TODO: how to handle update?
+            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
         };
     };
