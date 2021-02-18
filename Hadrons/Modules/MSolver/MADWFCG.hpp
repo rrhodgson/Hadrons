@@ -49,7 +49,7 @@ public:
                                     unsigned int, maxInnerIteration,
                                     unsigned int, maxOuterIteration,
                                     double      , residual,
-                                    std::string , eigenPack,);
+                                    std::string , eigenPack);
 };
 
 template <typename FImplInner, typename FImplOuter, int nBasis>
@@ -122,7 +122,6 @@ std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
 }
 
 
-// TODO: make this part of the module class (public part)
 template <typename FImplInner, typename FImplOuter, int nBasis>
 struct TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::CGincreaseTol : public MADWFinnerIterCallbackBase{
