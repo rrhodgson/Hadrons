@@ -198,39 +198,15 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
 
             LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
-            // TODO: correction step
-            // typedef HADRONS_DEFAULT_SCHUR_OP<FMatOuter, FermionFieldOuter> SchurFMatOuter;
-            // SchurFMatOuter somat(omat);
-            // ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
-            // // HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
-            // // shur_correction(omat, source, sol);
-            // CG_correction(somat, source, sol);
+            ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
+            HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
 
-            ConjugateGradient<LatticeFermionD> CG_correction(par().residual, 10000);
-              HADRONS_DEFAULT_SCHUR_SOLVE<LatticeFermionD> shur_correction(CG_correction);
-              
-              LatticeFermionD src_e_outer(env().getRbGrid(Ls_outer));
-              LatticeFermionD src_o_outer(env().getRbGrid(Ls_outer));
-              shur_correction.RedBlackSource(D_outer, source, src_e_outer, src_o_outer);
-              
-              LatticeFermionD sol_o_outer(env().getRbGrid(Ls_outer));
-              // sol_o_outer = Zero();
-              pickCheckerboard(Odd, sol_o_outer, sol);
-              LatticeFermionD Moosol_o_outer(env().getRbGrid(Ls_outer));
-              D_outer.Mooee(sol_o_outer,Moosol_o_outer);
+            LatticeFermionD Moosol(env().getGrid(Ls_outer));
+            D_outer.Mooee(sol,Moosol);
 
+            shur_correction(omat, source, Moosol);
 
-            LOG(Message) << " ||src_o||^2 = " << norm2(src_o_outer) << std::endl;
-            LOG(Message) << " ||sol_o||^2 = " << norm2(sol_o_outer) << std::endl;
-            LOG(Message) << " ||Mooee sol_o||^2 = " << norm2(Moosol_o_outer) << std::endl;
-              
-              SchurDiagTwoOperator<MobiusFermionD,LatticeFermionD> HermOpEO_outer(D_outer);
-
-              CG_correction(HermOpEO_outer, src_o_outer, Moosol_o_outer);
-
-            LOG(Message) << " ||sol_o||^2 = " << norm2(sol_o_outer) << std::endl;
-
-              shur_correction.RedBlackSolution(D_outer,Moosol_o_outer,src_e_outer,sol);
+            sol = Moosol;
 
             LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
