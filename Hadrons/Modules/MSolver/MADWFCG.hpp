@@ -48,8 +48,10 @@ public:
                                     std::string , outerAction,
                                     unsigned int, maxInnerIteration,
                                     unsigned int, maxOuterIteration,
-                                    double      , residual,
+                                    double      , innerResidual,
+                                    double      , outerResidual,
                                     std::string , eigenPack);
+                                    // std::string , gaugeField);
 };
 
 template <typename FImplInner, typename FImplOuter, int nBasis>
@@ -102,6 +104,7 @@ template <typename FImplInner, typename FImplOuter, int nBasis>
 std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::getReference(void)
 {
+    // std::vector<std::string> ref = {par().innerAction, par().outerAction, par().gaugeField};
     std::vector<std::string> ref = {par().innerAction, par().outerAction};
     
     if (!par().eigenPack.empty())
@@ -147,8 +150,9 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
 {
     LOG(Message) << "Setting up Schur red-black preconditioned MADWF "
                  << "CG for inner/outer action '" << par().innerAction 
-                 << "'/'" << par().outerAction << "', residual "
-                 << par().residual << ", and maximum inner/outer iteration " 
+                 << "'/'" << par().outerAction << "', inner/outer residual "
+                 << par().innerResidual << "/" << par().innerResidual
+                 << ", and maximum inner/outer iteration " 
                  << par().maxInnerIteration << "/" << par().maxOuterIteration
                  << std::endl;
 
@@ -158,13 +162,17 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
 
     auto &omat     = envGet(FMatOuter, par().outerAction);
 
+    // auto &Umu = envGet(GaugeFieldOuter, par().gaugeField);
+
     auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack);
 
     MobiusFermion<FImplOuter>  &D_outer = envGetDerived(FMatOuter, MobiusFermion<FImplOuter> , par().outerAction);
     ZMobiusFermion<FImplInner> &D_inner = envGetDerived(FMatInner, ZMobiusFermion<FImplInner>, par().innerAction);
 
+    // auto makeSolver = [&D_outer, &D_inner, &omat, &Umu, guesserPt, Ls_outer, Ls_inner, this] (bool subGuess)
     auto makeSolver = [&D_outer, &D_inner, &omat, guesserPt, Ls_outer, Ls_inner, this] (bool subGuess)
     {
+        // return [&D_outer, &D_inner, &omat, &Umu, guesserPt, Ls_outer, Ls_inner, subGuess, this]
         return [&D_outer, &D_inner, &omat, guesserPt, Ls_outer, Ls_inner, subGuess, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source)
         {
@@ -172,15 +180,17 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                 HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented");
             }
 
-            ConjugateGradient<FermionFieldOuter> CG_PV(par().residual, par().maxInnerIteration);
+            ConjugateGradient<FermionFieldOuter> CG_PV(par().outerResidual, par().maxInnerIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> Schur_PV(CG_PV);
             typedef PauliVillarsSolverRBprec<FermionFieldOuter, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter>> PVtype;
             PVtype PV_outer(Schur_PV);
+            // typedef PauliVillarsSolverFourierAccel<FermionFieldOuter, GaugeFieldOuter> PVtype;
+            // PVtype PV_outer(Umu, CG_PV);
 
-            ConjugateGradient<FermionFieldInner> CG_inner(par().residual, par().maxInnerIteration, 0);
+            ConjugateGradient<FermionFieldInner> CG_inner(par().innerResidual, par().maxInnerIteration, 0);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner> SchurSolver_inner(CG_inner);
 
-            CGincreaseTol update(CG_inner, par().residual);
+            CGincreaseTol update(CG_inner, par().outerResidual);
 
             MADWF<MobiusFermion<FImplOuter>, ZMobiusFermion<FImplInner>,
                   PVtype, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner>, 
@@ -188,27 +198,27 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
               madwf(D_outer, D_inner,
                     PV_outer, SchurSolver_inner,
                     *guesserPt,
-                    par().residual, par().maxOuterIteration,
+                    par().outerResidual, par().maxOuterIteration,
                     &update);
 
-            LOG(Message) << " ||source||^2 = " << norm2(source) << std::endl;
-            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
+            // LOG(Message) << " ||source||^2 = " << norm2(source) << std::endl;
+            // LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
             madwf(source, sol);
 
-            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
+            // LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
-            ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
-            HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
+            // ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
+            // HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
 
-            LatticeFermionD Moosol(env().getGrid(Ls_outer));
-            D_outer.Mooee(sol,Moosol);
+            // LatticeFermionD Moosol(env().getGrid(Ls_outer));
+            // D_outer.Mooee(sol,Moosol);
 
-            shur_correction(omat, source, Moosol);
+            // shur_correction(omat, source, Moosol);
 
-            sol = Moosol;
+            // sol = Moosol;
 
-            LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
+            // LOG(Message) << " ||sol||^2 = " << norm2(sol) << std::endl;
 
         };
     };
