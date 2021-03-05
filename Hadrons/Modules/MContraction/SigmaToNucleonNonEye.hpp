@@ -225,17 +225,17 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       }
       r.info.trace = 2;
       result.push_back(r);
-      // //Operator Q2, equivalent to the one-trace case in the rare-kaons module
-      // c=Zero();
-      // BaryonUtils<FIMPL>::Sigma_to_Nucleon_NonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
-      // sliceSum(c,buf,Tp);
-      // r.corr.clear();
-      // for (unsigned int t = 0; t < buf.size(); ++t)
-      // {
-      //     r.corr.push_back(buf[t]);
-      // }
-      // r.info.trace = 1;
-      // result.push_back(r);
+      //Operator Q2, equivalent to the one-trace case in the rare-kaons module
+      c=Zero();
+      BaryonUtils<FIMPL>::Sigma_to_Nucleon_NonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
+      sliceSum(c,buf,Tp);
+      r.corr.clear();
+      for (unsigned int t = 0; t < buf.size(); ++t)
+      {
+          r.corr.push_back(buf[t]);
+      }
+      r.info.trace = 1;
+      result.push_back(r);
     }
 
     saveResult(par().output, "stnNonEye", result);
