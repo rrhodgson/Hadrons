@@ -211,6 +211,8 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       Gamma(Gamma::Algebra::GammaZGamma5),
       Gamma(Gamma::Algebra::GammaTGamma5)}};
 
+
+    r.info.trace = 2;
     for (auto &G: g)
     {
       r.info.gammaH = G.g;
@@ -223,8 +225,12 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       {
           r.corr.push_back(buf[t]);
       }
-      r.info.trace = 2;
       result.push_back(r);
+    }
+    r.info.trace = 1;
+    for (auto &G: g)
+    {
+      r.info.gammaH = G.g;
       //Operator Q2, equivalent to the one-trace case in the rare-kaons module
       c=Zero();
       BaryonUtils<FIMPL>::Sigma_to_Nucleon_NonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
@@ -234,7 +240,6 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       {
           r.corr.push_back(buf[t]);
       }
-      r.info.trace = 1;
       result.push_back(r);
     }
 
