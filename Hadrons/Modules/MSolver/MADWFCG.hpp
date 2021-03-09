@@ -79,10 +79,10 @@ private:
 };
 
 MODULE_REGISTER_TMP(ZMADWFCG, ARG(TMADWFCG<ZMobiusFermion<ZFIMPLD>, ZFIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
-MODULE_REGISTER_TMP(MADWFCG, ARG(TMADWFCG<MobiusFermion<FIMPLD>, ZFIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
+MODULE_REGISTER_TMP( MADWFCG, ARG(TMADWFCG< MobiusFermion< FIMPLD>,  FIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
 
 /******************************************************************************
- *                 TMADWFCG implementation                             *
+ *                        TMADWFCG implementation                             *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
 template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
@@ -128,19 +128,20 @@ std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter
 
 template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
 struct TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
-::CGincreaseTol : public MADWFinnerIterCallbackBase{
-  ConjugateGradient<LatticeFermionD> &cg_inner;  
-  RealD outer_resid;
+::CGincreaseTol : public MADWFinnerIterCallbackBase {
+    ConjugateGradient<LatticeFermionD> &cg_inner;  
+    RealD outer_resid;
 
-  CGincreaseTol(ConjugateGradient<LatticeFermionD> &cg_inner,
-        RealD outer_resid): cg_inner(cg_inner), outer_resid(outer_resid){}
-  
-  void operator()(const RealD current_resid){
-    std::cout << "CGincreaseTol with current residual " << current_resid << " changing inner tolerance " << cg_inner.Tolerance << " -> ";
-    while(cg_inner.Tolerance < current_resid) cg_inner.Tolerance *= 2;    
-    //cg_inner.Tolerance = outer_resid/current_resid;
-    std::cout << cg_inner.Tolerance << std::endl;
-  }
+    CGincreaseTol(ConjugateGradient<LatticeFermionD> &cg_inner,
+    RealD outer_resid): cg_inner(cg_inner), outer_resid(outer_resid){}
+
+    void operator()(const RealD current_resid){
+        std::cout << "CGincreaseTol with current residual " << current_resid << " changing inner tolerance " << cg_inner.Tolerance << " -> ";
+        while(cg_inner.Tolerance < current_resid) cg_inner.Tolerance *= 2;
+
+        //cg_inner.Tolerance = outer_resid/current_resid;
+        std::cout << cg_inner.Tolerance << std::endl;
+    }
 };
 
 
@@ -151,28 +152,22 @@ void TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
 {
     LOG(Message) << "Setting up Schur red-black preconditioned MADWF "
                  << "CG for inner/outer action '"        << par().innerAction       << "'/'" << par().outerAction       << "', "
-                 << "inner/outer residual "              << par().innerResidual     << "/"   << par().innerResidual     << ", " 
+                 << "inner/outer residual "              << par().innerResidual     << "/"   << par().outerResidual     << ", " 
                  << "and maximum inner/outer iteration " << par().maxInnerIteration << "/"   << par().maxOuterIteration
                  << std::endl;
 
-    auto Ls_outer        = env().getObjectLs(par().outerAction);
-    // auto Ls_inner        = env().getObjectLs(par().innerAction);
-
+    auto Ls_outer  = env().getObjectLs(par().outerAction);
     auto &omat     = envGet(FMatOuter, par().outerAction);
-
     // auto &Umu = envGet(GaugeFieldOuter, par().gaugeField);
-
     auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack);
 
     FTypeOuter &D_outer = envGetDerived(FMatOuter, FTypeOuter, par().outerAction);
     FTypeInner &D_inner = envGetDerived(FMatInner, FTypeInner, par().innerAction);
 
-    // auto makeSolver = [&D_outer, &D_inner, &omat, &Umu, guesserPt, Ls_outer, Ls_inner, this] (bool subGuess)
-    // auto makeSolver = [&D_outer, &D_inner, &omat, guesserPt, Ls_outer, Ls_inner, this] (bool subGuess)
+    // auto makeSolver = [&D_outer, &D_inner, &Umu, guesserPt, this] (bool subGuess)
     auto makeSolver = [&D_outer, &D_inner, guesserPt, this] (bool subGuess)
     {
-        // return [&D_outer, &D_inner, &omat, &Umu, guesserPt, Ls_outer, Ls_inner, subGuess, this]
-        // return [&D_outer, &D_inner, &omat, guesserPt, Ls_outer, Ls_inner, subGuess, this]
+        // return [&D_outer, &D_inner, &Umu, guesserPt, subGuess, this]
         return [&D_outer, &D_inner, guesserPt, subGuess, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source)
         {
@@ -202,21 +197,6 @@ void TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
                     &update);
 
             madwf(source, sol);
-
-            // FermionFieldOuter tmp(D_outer.FermionGrid());
-            // D_outer.M(sol,tmp);
-            // tmp = source-tmp;
-            // RealD resid = sqrt(norm2(tmp)/norm2(source));
-            // LOG(Message) << "Final residual is " << resid << std::endl;
-            // assert(resid < outer_resid);
-
-
-            // ConjugateGradient<FermionFieldOuter> CG_correction(par().residual, par().maxInnerIteration);
-            // HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> shur_correction(CG_correction, false, true);
-            // LatticeFermionD Moosol(env().getGrid(Ls_outer));
-            // D_outer.Mooee(sol,Moosol);
-            // shur_correction(omat, source, Moosol);
-            // sol = Moosol;
 
         };
     };
