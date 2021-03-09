@@ -1,5 +1,5 @@
 /*
- * MADWFPrecCG.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
+ * MADWFCG.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
  * Copyright (C) 2015 - 2020
  *
@@ -29,5 +29,7 @@ using namespace Grid;
 using namespace Hadrons;
 using namespace MSolver;
 
-template class Grid::Hadrons::MSolver::TMADWFCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>;
+template class Grid::Hadrons::MSolver::TMADWFCG<ZMobiusFermion<ZFIMPLD>, ZFIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>;
+template class Grid::Hadrons::MSolver::TMADWFCG<MobiusFermion<ZFIMPLD>, FIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>;
+
 
