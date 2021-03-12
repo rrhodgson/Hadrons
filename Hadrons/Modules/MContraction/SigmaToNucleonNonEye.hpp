@@ -99,7 +99,8 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        Gamma::Algebra, gammaH,
+                                        Gamma::Algebra, gammaH1,
+                                        Gamma::Algebra, gammaH2,
                                         Gamma::Algebra, gammaASigma,
                                         Gamma::Algebra, gammaBSigma,
                                         Gamma::Algebra, gammaANucl,
@@ -173,6 +174,7 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
 {
     const Gamma GammaB(Gamma::Algebra::SigmaXZ); // C*gamma_5
     const Gamma Id(Gamma::Algebra::Identity); // C*gamma_5
+    const Gamma G5(Gamma::Algebra::Gamma5); // C*gamma_5
 
     LOG(Message) << "Computing sigma-to-nucleon contractions '" << getName() << "'" << std::endl;
     LOG(Message) << "' with (Gamma^A,Gamma^B)_sigma = ( Identity, C*gamma_5 ) and (Gamma^A,Gamma^B)_nucl = ( Identity, C*gamma_5 )" << std::endl; 
@@ -194,12 +196,50 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     auto &qdTf      = envGet(PropagatorField, par().qdTf);
     auto &qsTi      = envGet(PropagatorField, par().qsTi);
     auto qut         = quSpec[par().tf];
-    for (auto &G: Gamma::gall)
+
+    const std::array<const Gamma, 16> gH1 = {{
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5)}};
+    const std::array<const Gamma, 16> gH2 = {{
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5),
+      Gamma(Gamma::Algebra::GammaX),
+      Gamma(Gamma::Algebra::GammaY),
+      Gamma(Gamma::Algebra::GammaZ),
+      Gamma(Gamma::Algebra::GammaT),
+      Gamma(Gamma::Algebra::GammaXGamma5),
+      Gamma(Gamma::Algebra::GammaYGamma5),
+      Gamma(Gamma::Algebra::GammaZGamma5),
+      Gamma(Gamma::Algebra::GammaTGamma5)}};
+
+    for (int k=0; k<16; k++)
     {
-      r.info.gammaH = G.g;
+      r.info.gammaH1 = gH1[k].g;
+      r.info.gammaH2 = gH2[k].g;
+      std::cout << "Computing w/ gH1 = " << gH1[k].g << " and gH2 = " << gH2[k].g << std::endl;
       //Operator Q1, equivalent to the two-trace case in the rare-kaons module
       c=Zero();
-      BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q1",c);
+      BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,gH1[k],gH2[k],GammaB,GammaB,"Q1",c);
       sliceSum(c,buf,Tp);
       r.corr.clear();
       for (unsigned int t = 0; t < buf.size(); ++t)
@@ -210,7 +250,7 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       result.push_back(r);
       //Operator Q2, equivalent to the one-trace case in the rare-kaons module
       c=Zero();
-      BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
+      BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,gH1[k],gH2[k],GammaB,GammaB,"Q2",c);
       sliceSum(c,buf,Tp);
       r.corr.clear();
       for (unsigned int t = 0; t < buf.size(); ++t)
