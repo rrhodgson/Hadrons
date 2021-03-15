@@ -179,8 +179,12 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     LOG(Message) << "' with (Gamma^A,Gamma^B)_sigma = ( Identity, C*gamma_5 ) and (Gamma^A,Gamma^B)_nucl = ( Identity, C*gamma_5 )" << std::endl; 
     LOG(Message) << " using sink " << par().sink << "." << std::endl;
         
+    int nt = env().getDim(3);
+    std::cout << "nt = " << nt << std::endl;
+
     envGetTmp(SpinMatrixField, c);
-    std::vector<SpinMatrix> buf;
+    std::vector<SpinMatrix> buf(nt);
+    std::vector<SpinMatrix> bufTotal(nt);
 
     std::vector<Result> result;
     Result              r;
@@ -212,36 +216,51 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
       Gamma(Gamma::Algebra::GammaTGamma5)}};
 
 
+    r.info.gammaH = Gamma::Algebra::Identity;
+
     r.info.trace = 2;
+    for (unsigned int t = 0; t < bufTotal.size(); ++t) {
+        bufTotal[t] = 0;
+    }
     for (auto &G: g)
     {
-      r.info.gammaH = G.g;
-      //Operator Q1, equivalent to the two-trace case in the rare-kaons module
       c=Zero();
+      // r.info.gammaH = G.g;
+      //Operator Q1, equivalent to the two-trace case in the rare-kaons module
       BaryonUtils<FIMPL>::Sigma_to_Nucleon_NonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q1",c);
       sliceSum(c,buf,Tp);
-      r.corr.clear();
-      for (unsigned int t = 0; t < buf.size(); ++t)
-      {
-          r.corr.push_back(buf[t]);
+      for (unsigned int t = 0; t < buf.size(); ++t) {
+          bufTotal[t] += buf[t];
       }
-      result.push_back(r);
     }
+    r.corr.clear();
+    for (unsigned int t = 0; t < bufTotal.size(); ++t)
+    {
+        r.corr.push_back(bufTotal[t]);
+    }
+    result.push_back(r);
+
     r.info.trace = 1;
+    for (unsigned int t = 0; t < bufTotal.size(); ++t) {
+        bufTotal[t] = 0;
+    }
     for (auto &G: g)
     {
-      r.info.gammaH = G.g;
-      //Operator Q2, equivalent to the one-trace case in the rare-kaons module
       c=Zero();
+      // r.info.gammaH = G.g;
+      //Operator Q2, equivalent to the one-trace case in the rare-kaons module
       BaryonUtils<FIMPL>::Sigma_to_Nucleon_NonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
       sliceSum(c,buf,Tp);
-      r.corr.clear();
-      for (unsigned int t = 0; t < buf.size(); ++t)
-      {
-          r.corr.push_back(buf[t]);
+      for (unsigned int t = 0; t < buf.size(); ++t) {
+          bufTotal[t] += buf[t];
       }
-      result.push_back(r);
     }
+    r.corr.clear();
+    for (unsigned int t = 0; t < bufTotal.size(); ++t)
+    {
+        r.corr.push_back(bufTotal[t]);
+    }
+    result.push_back(r);
 
     saveResult(par().output, "stnNonEye", result);
 
