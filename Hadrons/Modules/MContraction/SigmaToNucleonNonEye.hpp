@@ -92,8 +92,9 @@ class TSigmaToNucleonNonEye: public Module<SigmaToNucleonNonEyePar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
-    BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
-    SINK_TYPE_ALIASES(Scalar);
+    // BASIC_TYPE_ALIASES(ScalarImplCR, Scalar);
+    // SINK_TYPE_ALIASES(Scalar);
+    SINK_TYPE_ALIASES();
     typedef typename SpinMatrixField::vector_object::scalar_object SpinMatrix;
     class Metadata: Serializable
     {
@@ -179,6 +180,7 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     LOG(Message) << " using sink " << par().sink << "." << std::endl;
         
     envGetTmp(SpinMatrixField, c);
+    std::vector<SpinMatrix> tmp;
     std::vector<SpinMatrix> buf;
 
     std::vector<Result> result;
@@ -190,36 +192,68 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
 
     auto &quTi      = envGet(PropagatorField, par().quTi);
     auto &quTf      = envGet(PropagatorField, par().quTf);
-    auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    // auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    auto &quSpec    = envGet(PropagatorField, par().quSpec);
     auto &qdTf      = envGet(PropagatorField, par().qdTf);
     auto &qsTi      = envGet(PropagatorField, par().qsTi);
-    auto qut         = quSpec[par().tf];
-    for (auto &G: Gamma::gall)
-    {
-      r.info.gammaH = G.g;
-      //Operator Q1, equivalent to the two-trace case in the rare-kaons module
+    // auto qut         = quSpec[par().tf];
+
+    auto &sink      = envGet(SinkFn, par().sink);
+
+    SlicedPropagator quSpec_slice    = sink(quSpec);
+    auto qut         = quSpec_slice[par().tf];
+
+    const std::array<const Gamma, 8> g = {{
+        Gamma(Gamma::Algebra::GammaX),
+        Gamma(Gamma::Algebra::GammaY),
+        Gamma(Gamma::Algebra::GammaZ),
+        Gamma(Gamma::Algebra::GammaT),
+        Gamma(Gamma::Algebra::GammaXGamma5),
+        Gamma(Gamma::Algebra::GammaYGamma5),
+        Gamma(Gamma::Algebra::GammaZGamma5),
+        Gamma(Gamma::Algebra::GammaTGamma5)
+    }};
+
+    int nt = env().getDim(3);
+    std::cout << "nt = " << nt << std::endl;
+
+    //Operator Q1, equivalent to the two-trace case in the rare-kaons module
+    buf = std::vector<SpinMatrix>(nt, Zero());
+    r.info.gammaH = Gamma::Algebra::Identity;
+    r.info.trace = 2;
+    for (auto &G: g) {
       c=Zero();
       BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q1",c);
-      sliceSum(c,buf,Tp);
-      r.corr.clear();
-      for (unsigned int t = 0; t < buf.size(); ++t)
-      {
-          r.corr.push_back(buf[t]);
+      sliceSum(c,tmp,Tp);
+      for (unsigned int t = 0; t < buf.size(); ++t) {
+          buf[t] += tmp[t];
       }
-      r.info.trace = 2;
-      result.push_back(r);
-      //Operator Q2, equivalent to the one-trace case in the rare-kaons module
+    }
+    r.corr.clear();
+    for (unsigned int t = 0; t < buf.size(); ++t) {
+        r.corr.push_back(buf[t]);
+    }
+    result.push_back(r);
+
+
+    //Operator Q2, equivalent to the one-trace case in the rare-kaons module
+    buf = std::vector<SpinMatrix>(nt, Zero());
+    r.info.gammaH = Gamma::Algebra::Identity;
+    r.info.trace = 1;
+    for (auto &G: g) {
       c=Zero();
       BaryonUtils<FIMPL>::SigmaToNucleonNonEye(quTi,quTf,qut,qdTf,qsTi,G,GammaB,GammaB,"Q2",c);
-      sliceSum(c,buf,Tp);
-      r.corr.clear();
-      for (unsigned int t = 0; t < buf.size(); ++t)
-      {
-          r.corr.push_back(buf[t]);
+      sliceSum(c,tmp,Tp);
+      for (unsigned int t = 0; t < buf.size(); ++t) {
+          buf[t] += tmp[t];
       }
-      r.info.trace = 1;
-      result.push_back(r);
     }
+    r.corr.clear();
+    for (unsigned int t = 0; t < buf.size(); ++t) {
+        r.corr.push_back(buf[t]);
+    }
+    result.push_back(r);
+
 
     saveResult(par().output, "stnNonEye", result);
 
