@@ -48,13 +48,13 @@ public:
                                     std::string , outerAction,
                                     unsigned int, maxInnerIteration,
                                     unsigned int, maxOuterIteration,
+                                    unsigned int, maxPVIteration,
                                     double      , innerResidual,
                                     double      , outerResidual,
                                     std::string , eigenPack);
-                                    // std::string , gaugeField);
 };
 
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
 class TMADWFCG: public Module<MADWFCGPar>
 {
 public:
@@ -78,22 +78,22 @@ private:
     struct CGincreaseTol;
 };
 
-MODULE_REGISTER_TMP(ZMADWFCG, ARG(TMADWFCG<ZMobiusFermion<ZFIMPLD>, ZFIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
-MODULE_REGISTER_TMP( MADWFCG, ARG(TMADWFCG< MobiusFermion< FIMPLD>,  FIMPLD, MobiusFermion<FIMPLD>, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
+MODULE_REGISTER_TMP(ZMADWFCG, ARG(TMADWFCG<ZFIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
+MODULE_REGISTER_TMP( MADWFCG, ARG(TMADWFCG< FIMPLD, FIMPLD, HADRONS_DEFAULT_LANCZOS_NBASIS>), MSolver);
 
 /******************************************************************************
  *                        TMADWFCG implementation                             *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::TMADWFCG(const std::string name)
 : Module<MADWFCGPar>(name)
 {}
 
 // dependencies/products ///////////////////////////////////////////////////////
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::getInput(void)
 {
     std::vector<std::string> in;
@@ -101,11 +101,10 @@ std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter
     return in;
 }
 
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::getReference(void)
 {
-    // std::vector<std::string> ref = {par().innerAction, par().outerAction, par().gaugeField};
     std::vector<std::string> ref = {par().innerAction, par().outerAction};
     
     if (!par().eigenPack.empty())
@@ -116,8 +115,8 @@ std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter
     return ref;
 }
 
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+std::vector<std::string> TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::getOutput(void)
 {
     std::vector<std::string> out = {getName(), getName() + "_subtract"};
@@ -126,8 +125,8 @@ std::vector<std::string> TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter
 }
 
 
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-struct TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+struct TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::CGincreaseTol : public MADWFinnerIterCallbackBase {
     ConjugateGradient<LatticeFermionD> &cg_inner;  
     RealD outer_resid;
@@ -136,68 +135,62 @@ struct TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
     RealD outer_resid): cg_inner(cg_inner), outer_resid(outer_resid){}
 
     void operator()(const RealD current_resid){
-        std::cout << "CGincreaseTol with current residual " << current_resid << " changing inner tolerance " << cg_inner.Tolerance << " -> ";
+        LOG(Message) << "CGincreaseTol with current residual " << current_resid << " changing inner tolerance " << cg_inner.Tolerance << " -> ";
         while(cg_inner.Tolerance < current_resid) cg_inner.Tolerance *= 2;
 
         //cg_inner.Tolerance = outer_resid/current_resid;
-        std::cout << cg_inner.Tolerance << std::endl;
+        LOG(Message) << cg_inner.Tolerance << std::endl;
     }
 };
 
 
 // setup ///////////////////////////////////////////////////////////////////////
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-void TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+void TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::setup(void)
 {
-    LOG(Message) << "Setting up Schur red-black preconditioned MADWF "
-                 << "CG for inner/outer action '"        << par().innerAction       << "'/'" << par().outerAction       << "', "
-                 << "inner/outer residual "              << par().innerResidual     << "/"   << par().outerResidual     << ", " 
-                 << "and maximum inner/outer iteration " << par().maxInnerIteration << "/"   << par().maxOuterIteration
-                 << std::endl;
+    LOG(Message) << "Setting up MADWF solver " << std::endl
+                 << "with inner/outer action  '"          << par().innerAction       << "'/'" << par().outerAction       << std::endl
+                 << "     inner/outer residual "          << par().innerResidual     <<  "/"  << par().outerResidual     << std::endl
+                 << "     maximum inner/outer/PV iterations " << par().maxInnerIteration <<  "/"  << par().maxOuterIteration <<  "/"  << par().maxPVIteration << std::endl;
 
     auto Ls_outer  = env().getObjectLs(par().outerAction);
     auto &omat     = envGet(FMatOuter, par().outerAction);
-    // auto &Umu = envGet(GaugeFieldOuter, par().gaugeField);
     auto guesserPt = makeGuesser<FImplInner, nBasis>(par().eigenPack);
 
-    FTypeOuter &D_outer = envGetDerived(FMatOuter, FTypeOuter, par().outerAction);
-    FTypeInner &D_inner = envGetDerived(FMatInner, FTypeInner, par().innerAction);
+    CayleyFermion5D<FImplOuter> &D_outer = envGetDerived(FMatOuter, CayleyFermion5D<FImplOuter>, par().outerAction);
+    CayleyFermion5D<FImplInner> &D_inner = envGetDerived(FMatInner, CayleyFermion5D<FImplInner>, par().innerAction);
 
-    // auto makeSolver = [&D_outer, &D_inner, &Umu, guesserPt, this] (bool subGuess)
     auto makeSolver = [&D_outer, &D_inner, guesserPt, this] (bool subGuess)
     {
-        // return [&D_outer, &D_inner, &Umu, guesserPt, subGuess, this]
         return [&D_outer, &D_inner, guesserPt, subGuess, this]
         (FermionFieldOuter &sol, const FermionFieldOuter &source)
         {
             if (subGuess) {
-                HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented");
+                HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented!");
             }
 
-            ConjugateGradient<FermionFieldOuter> CG_PV(par().outerResidual, par().maxInnerIteration);
+            ConjugateGradient<FermionFieldOuter> CG_PV(par().outerResidual, par().maxPVIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> Schur_PV(CG_PV);
             typedef PauliVillarsSolverRBprec<FermionFieldOuter, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter>> PVtype;
             PVtype PV_outer(Schur_PV);
-            // typedef PauliVillarsSolverFourierAccel<FermionFieldOuter, GaugeFieldOuter> PVtype;
-            // PVtype PV_outer(Umu, CG_PV);
 
             ConjugateGradient<FermionFieldInner> CG_inner(par().innerResidual, par().maxInnerIteration, 0);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner> SchurSolver_inner(CG_inner);
 
             CGincreaseTol update(CG_inner, par().outerResidual);
 
-            MADWF<FTypeOuter, FTypeInner,
+            MADWF<CayleyFermion5D<FImplOuter>, CayleyFermion5D<FImplInner>,
+            // MADWF<FTypeOuter, FTypeInner,
                   PVtype, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner>, 
                   LinearFunction<FermionFieldInner> >  
-              madwf(D_outer, D_inner,
-                    PV_outer, SchurSolver_inner,
-                    *guesserPt,
-                    par().outerResidual, par().maxOuterIteration,
-                    &update);
+                madwf(D_outer, D_inner,
+                      PV_outer, SchurSolver_inner,
+                      *guesserPt,
+                      par().outerResidual, par().maxOuterIteration,
+                      &update);
 
             madwf(source, sol);
-
         };
     };
     auto solver = makeSolver(false);
@@ -207,10 +200,9 @@ void TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
 }
 
 
-
 // execution ///////////////////////////////////////////////////////////////////
-template <typename FTypeInner, typename FImplInner, typename FTypeOuter, typename FImplOuter, int nBasis>
-void TMADWFCG<FTypeInner, FImplInner, FTypeOuter, FImplOuter, nBasis>
+template <typename FImplInner, typename FImplOuter, int nBasis>
+void TMADWFCG<FImplInner, FImplOuter, nBasis>
 ::execute(void)
 {}
 
