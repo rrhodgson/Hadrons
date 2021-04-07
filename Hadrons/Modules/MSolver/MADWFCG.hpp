@@ -149,18 +149,6 @@ struct TMADWFCG<FImplInner, FImplOuter, FImplCleanUp, nBasis>
     }
 };
 
-// template <class Fieldi, class Fieldo,IfNotSame<Fieldi,Fieldo> X=0>
-// inline void convert(const Fieldi &from,Fieldo &to) 
-// {
-//   precisionChange(to,from);
-// }
-// template <class Fieldi, class Fieldo,IfSame<Fieldi,Fieldo> X=0>
-// inline void convert(const Fieldi &from,Fieldo &to) 
-// {
-//   to=from;
-// }
-
-
 
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImplInner, typename FImplOuter, typename FImplCleanUp, int nBasis>
@@ -189,21 +177,15 @@ void TMADWFCG<FImplInner, FImplOuter, FImplCleanUp, nBasis>
                 HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented!");
             }
 
-            LOG(Message) << "0 " << std::endl;
-
             ConjugateGradient<FermionFieldOuter> CG_PV(par().outerResidual, par().maxPVIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> Schur_PV(CG_PV);
             typedef PauliVillarsSolverRBprec<FermionFieldOuter, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter>> PVtype;
             PVtype PV_outer(Schur_PV);
 
-            LOG(Message) << "1 " << std::endl;
-
             ConjugateGradient<FermionFieldInner> CG_inner(par().innerResidual, par().maxInnerIteration, 0);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner> SchurSolver_inner(CG_inner);
 
             CGincreaseTol update(CG_inner, par().outerResidual);
-
-            LOG(Message) << "2 " << std::endl;
 
             FermionFieldOuter pre_sol(D_outer.FermionGrid());
             // FermionFieldOuter pre_sol(env().getGrid(Ls_outer));
@@ -211,8 +193,6 @@ void TMADWFCG<FImplInner, FImplOuter, FImplCleanUp, nBasis>
             FermionFieldOuter pre_source(D_outer.FermionGrid());
             // FermionFieldOuter pre_source(env().getGrid(Ls_outer));
             convert(source, pre_source);
-
-            LOG(Message) << "3 " << std::endl;
 
             MADWF<CayleyFermion5D<FImplOuter>, CayleyFermion5D<FImplInner>,
                   PVtype, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner>, 
@@ -223,47 +203,28 @@ void TMADWFCG<FImplInner, FImplOuter, FImplCleanUp, nBasis>
                       par().outerResidual, par().maxOuterIteration,
                       &update);
 
-            LOG(Message) << "4 " << std::endl;
-
             madwf(pre_source, pre_sol);
-
-            LOG(Message) << "5 " << std::endl;
 
             convert(pre_sol, sol);
 
-            LOG(Message) << "6 " << std::endl;
-
             ConjugateGradient<FermionFieldCleanUp> CG_correction(par().outerResidual, 10000);
-              HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldCleanUp> shur_correction(CG_correction);
+            HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldCleanUp> shur_correction(CG_correction);
 
-            LOG(Message) << "7 " << std::endl;
-
-              FermionFieldCleanUp src_e_outer(env().getRbGrid(Ls_outer));
-              FermionFieldCleanUp src_o_outer(env().getRbGrid(Ls_outer));
-              shur_correction.RedBlackSource(D_cleanup, source, src_e_outer, src_o_outer);
-
-            LOG(Message) << "8 " << std::endl;
+            FermionFieldCleanUp src_e_outer(env().getRbGrid(Ls_outer));
+            FermionFieldCleanUp src_o_outer(env().getRbGrid(Ls_outer));
+            shur_correction.RedBlackSource(D_cleanup, source, src_e_outer, src_o_outer);
             
-              FermionFieldCleanUp sol_o_outer(env().getRbGrid(Ls_outer));
-              // sol_o_outer = Zero();
-              pickCheckerboard(Odd, sol_o_outer, sol);
-              FermionFieldCleanUp Moosol_o_outer(env().getRbGrid(Ls_outer));
-              D_cleanup.Mooee(sol_o_outer,Moosol_o_outer);
-
-            LOG(Message) << "9 " << std::endl;
+            FermionFieldCleanUp sol_o_outer(env().getRbGrid(Ls_outer));
+            pickCheckerboard(Odd, sol_o_outer, sol);
+            FermionFieldCleanUp Moosol_o_outer(env().getRbGrid(Ls_outer));
+            D_cleanup.Mooee(sol_o_outer,Moosol_o_outer);
             
 
-            LOG(Message) << " ||src_o||^2 = " << norm2(src_o_outer) << std::endl;
-            LOG(Message) << " ||sol_o||^2 = " << norm2(sol_o_outer) << std::endl;
-            LOG(Message) << " ||Mooee sol_o||^2 = " << norm2(Moosol_o_outer) << std::endl;
+            SchurDiagTwoOperator<CayleyFermion5D<FImplCleanUp>,FermionFieldCleanUp> HermOpEO_outer(D_cleanup);
 
-              SchurDiagTwoOperator<CayleyFermion5D<FImplCleanUp>,FermionFieldCleanUp> HermOpEO_outer(D_cleanup);
+            CG_correction(HermOpEO_outer, src_o_outer, Moosol_o_outer);
 
-              CG_correction(HermOpEO_outer, src_o_outer, Moosol_o_outer);
-
-            LOG(Message) << " ||sol_o||^2 = " << norm2(sol_o_outer) << std::endl;
-
-              shur_correction.RedBlackSolution(D_cleanup,Moosol_o_outer,src_e_outer,sol);
+            shur_correction.RedBlackSolution(D_cleanup,Moosol_o_outer,src_e_outer,sol);
         };
     };
     auto solver = makeSolver(false);
