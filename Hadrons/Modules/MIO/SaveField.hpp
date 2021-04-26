@@ -76,6 +76,12 @@ public:
     virtual void execute(void);
 };
 
+MODULE_REGISTER_TMP(SaveGauge, TSaveField<GIMPL::GaugeField>, MIO);
+MODULE_REGISTER_TMP(SaveGaugeLink, TSaveField<GIMPL::GaugeLinkField>, MIO);
+
+MODULE_REGISTER_TMP(SaveGaugeF, TSaveField<GIMPLF::GaugeField>, MIO);
+MODULE_REGISTER_TMP(SaveGaugeLinkF, TSaveField<GIMPLF::GaugeLinkField>, MIO);
+
 MODULE_REGISTER_TMP(SavePropagator, TSaveField<FIMPL::PropagatorField>, MIO);
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 MODULE_REGISTER_TMP(SavePropagatorIo32, ARG(TSaveField<FIMPL::PropagatorField, FIMPLF::PropagatorField>), MIO);
