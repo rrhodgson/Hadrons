@@ -80,7 +80,7 @@ MODULE_REGISTER_TMP(LoadFermionEigenPack, ARG(TLoadEigenPack<FermionEigenPack<FI
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 MODULE_REGISTER_TMP(LoadFermionEigenPackF, ARG(TLoadEigenPack<FermionEigenPack<FIMPLF>, GIMPLF>), MIO);
 MODULE_REGISTER_TMP(LoadFermionEigenPackIo32, ARG(TLoadEigenPack<FermionEigenPack<FIMPL, FIMPLF>, GIMPL>), MIO);
-MODULE_REGISTER_TMP(LoadFermionEigenPackIo64, ARG(TLoadEigenPack<FermionEigenPack<FIMPLF, FIMPL>, GIMPL>), MIO);
+MODULE_REGISTER_TMP(LoadFermionEigenPackIo64, ARG(TLoadEigenPack<FermionEigenPack<FIMPLF, FIMPL>, GIMPLF>), MIO);
 #endif
 
 /******************************************************************************
