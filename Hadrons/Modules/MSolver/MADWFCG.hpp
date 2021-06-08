@@ -51,6 +51,7 @@ public:
                                     unsigned int, maxPVIteration,
                                     double      , innerResidual,
                                     double      , outerResidual,
+                                    double      , PVResidual,
                                     std::string , eigenPack);
 };
 
@@ -152,7 +153,7 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
 {
     LOG(Message) << "Setting up MADWF solver " << std::endl;
     LOG(Message) << "with inner/outer action  '"  << par().innerAction   << "'/'" << par().outerAction   << "'" << std::endl;
-    LOG(Message) << "     inner/outer residual "  << par().innerResidual <<  "/"  << par().outerResidual        << std::endl;
+    LOG(Message) << "     inner/outer/PV residual "  << par().innerResidual <<  "/"  << par().outerResidual << "/" << par().PVResidual << std::endl;
     LOG(Message) << "     maximum inner/outer/PV iterations " << par().maxInnerIteration <<  "/"  << par().maxOuterIteration <<  "/"  << par().maxPVIteration << std::endl;
     if (!par().eigenPack.empty())
         LOG(Message) << "     eigenpack '" << par().eigenPack << "'" << std::endl;
@@ -173,7 +174,7 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                 HADRONS_ERROR(Implementation, "MADWF solver with subtracted guess is not implemented!");
             }
 
-            ConjugateGradient<FermionFieldOuter> CG_PV(par().outerResidual, par().maxPVIteration);
+            ConjugateGradient<FermionFieldOuter> CG_PV(par().PVResidual, par().maxPVIteration);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> Schur_PV(CG_PV);
             typedef PauliVillarsSolverRBprec<FermionFieldOuter, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter>> PVtype;
             PVtype PV_outer(Schur_PV);
@@ -181,7 +182,7 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
             ConjugateGradient<FermionFieldInner> CG_inner(par().innerResidual, par().maxInnerIteration, 0);
             HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner> SchurSolver_inner(CG_inner);
 
-            CGincreaseTol update(CG_inner, par().outerResidual);
+            // CGincreaseTol update(CG_inner, par().outerResidual);
 
             MADWF<CayleyFermion5D<FImplOuter>, CayleyFermion5D<FImplInner>,
                   PVtype, HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldInner>, 
@@ -190,7 +191,7 @@ void TMADWFCG<FImplInner, FImplOuter, nBasis>
                       PV_outer, SchurSolver_inner,
                       *guesserPt,
                       par().outerResidual, par().maxOuterIteration,
-                      &update);
+                      nullptr);
 
             madwf(source, sol);
         };
