@@ -201,7 +201,8 @@ void TGaugeProp<FImpl>::solvePropagator(PropagatorField &prop,
         }
         sol = Zero();
         LOG(Message) << "Solve" << std::endl;
-        solver(sol, source);
+        if (s==0 & c==0) solver(sol, source);
+        else LOG(Message) << "Spin-color comp = Zero" << std::endl;
         LOG(Message) << "Export solution" << std::endl;
         FermToProp<FImpl>(prop, sol, s, c);
         // create 4D propagators from 5D one if necessary
