@@ -107,7 +107,7 @@ std::vector<std::string> TEPackDiff<Pack, FImpl, GImpl>::getInput(void)
 template <typename Pack, typename FImpl, typename GImpl>
 std::vector<std::string> TEPackDiff<Pack, FImpl, GImpl>::getOutput(void)
 {
-    std::vector<std::string> out = {getName()};
+    std::vector<std::string> out = {};
     
     return out;
 }
@@ -116,7 +116,7 @@ std::vector<std::string> TEPackDiff<Pack, FImpl, GImpl>::getOutput(void)
 template <typename Pack, typename FImpl, typename GImpl>
 void TEPackDiff<Pack, FImpl, GImpl>::setup(void)
 {
-    envCreateLat(FermionField, "EVecdiff");
+    envCreateLat(Field, "EVecdiff");
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -129,21 +129,19 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
     auto &epack1 = envGetDerived(BasePack, Pack, par().epack1);
     auto &epack2 = envGetDerived(BasePack, Pack, par().epack2);
 
-    auto &EVecDiff = envGet(FermionField, "EVecdiff");
-    RealD EValDiff;
+    auto &EVecDiff = envGet(Field, "EVecdiff");
 
     if (epack1.eval.size() == epack2.eval.size()) {
         int N = epack1.eval.size();
         for (int i=0; i<N; i++) {
-            EValDiff = epack1.eval[i] - epack2.eval[i];
-            LOG(Message) << "||val1[" << i << "]||^2 = " << epack1.eval[i] << "   ";
-            LOG(Message) << "||val2[" << i << "]||^2 = " << epack2.eval[i] << "   ";
-            LOG(Message) << "||diff||^2 = "<< EValDiff << std::endl;
+            LOG(Message) << "val1[" << i << "] = " << epack1.eval[i] << "   "
+                         << "val2[" << i << "] = " << epack2.eval[i] << "   "
+                         << "diff = "<< epack1.eval[i] - epack2.eval[i] << std::endl;
 
             EVecDiff = epack1.evec[i] - epack2.evec[i];
-            LOG(Message) << "||vec1[" << i << "]||^2 = " << norm2(epack1.evec[i]) << "   ";
-            LOG(Message) << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) << "   ";
-            LOG(Message) << "||diff||^2 = "<< norm2(EVecDiff) << std::endl << std::endl;
+            LOG(Message) << "||vec1[" << i << "]||^2 = " << norm2(epack1.evec[i]) << "   "
+                         << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) << "   "
+                         << "||diff||^2 = "<< norm2(EVecDiff) << std::endl << std::endl;
         }
 
     } else {
@@ -151,16 +149,6 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
         LOG(Message) << "epack1 = " << epack1.eval.size() << std::endl;
         LOG(Message) << "epack2 = " << epack2.eval.size() << std::endl;
     }
-
-    // auto &EPackdiff = envGet(PropagatorField, getName());
-    // auto &prop1    = envGet(PropagatorField, par().source1);
-    // auto &prop2    = envGet(PropagatorField, par().source2);
-
-    // EPackdiff = prop1 - prop2;
-
-    // LOG(Message) << "||" << par().source1 << "||^2 = " << norm2(prop1) << std::endl;
-    // LOG(Message) << "||" << par().source2 << "||^2 = "<< norm2(prop2) << std::endl;
-    // LOG(Message) << "||" << getName() << "||^2 = "<< norm2(EPackdiff) << std::endl;
     
 }
 
