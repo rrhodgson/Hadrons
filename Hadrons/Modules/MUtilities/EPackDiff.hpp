@@ -139,7 +139,7 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
                          << "val2[" << i << "] = " << epack2.eval[i] << "   "
                          << "diff = "<< epack1.eval[i] - epack2.eval[i] << std::endl;
 
-            //EVecDiff = epack1.evec[i];
+            EVecDiff = epack1.evec[i] - epack2.evec[i];
             LOG(Message) << "||vec1[" << i << "]||^2 = " << norm2(epack1.evec[i]) << "   "
                          << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) <<"   "
                          << "||diff||^2 = "<< norm2(EVecDiff) << std::endl << std::endl;
