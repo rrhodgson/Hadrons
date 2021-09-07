@@ -130,6 +130,7 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
     auto &epack2 = envGetDerived(BasePack, Pack, par().epack2);
 
     auto &EVecDiff = envGet(Field, "EVecdiff");
+    EVecDiff.reset(epack1.evec[0].Grid());
 
     if (epack1.eval.size() == epack2.eval.size()) {
         int N = epack1.eval.size();
@@ -138,9 +139,9 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
                          << "val2[" << i << "] = " << epack2.eval[i] << "   "
                          << "diff = "<< epack1.eval[i] - epack2.eval[i] << std::endl;
 
-            EVecDiff = epack1.evec[i] - epack2.evec[i];
+            //EVecDiff = epack1.evec[i];
             LOG(Message) << "||vec1[" << i << "]||^2 = " << norm2(epack1.evec[i]) << "   "
-                         << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) << "   "
+                         << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) <<"   "
                          << "||diff||^2 = "<< norm2(EVecDiff) << std::endl << std::endl;
         }
 
