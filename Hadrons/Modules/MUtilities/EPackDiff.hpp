@@ -141,8 +141,14 @@ void TEPackDiff<Pack, FImpl, GImpl>::execute(void)
 
             EVecDiff = epack1.evec[i] - epack2.evec[i];
             LOG(Message) << "||vec1[" << i << "]||^2 = " << norm2(epack1.evec[i]) << "   "
-                         << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) <<"   "
+                         << "||vec2[" << i << "]||^2 = " << norm2(epack2.evec[i]) << "   "
                          << "||diff||^2 = "<< norm2(EVecDiff) << std::endl << std::endl;
+
+            ComplexD EVecProd = innerProduct(epack1.evec[i], epack2.evec[i]);
+            LOG(Message) << "vec1[" << i << "].vec2[" << i << "]   = " << EVecProd << "   "
+                         << "|vec1[" << i << "].vec2[" << i << "]| = " << abs(EVecProd) << "   " << std::endl << std::endl;
+
+
         }
 
     } else {
