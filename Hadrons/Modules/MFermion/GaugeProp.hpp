@@ -52,12 +52,13 @@ public:
                                     std::string, solver);
 };
 
-template <typename FImpl>
+template <typename FImpl, typename FImplSrc>
 class TGaugeProp: public Module<GaugePropPar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
     SOLVER_TYPE_ALIASES(FImpl,);
+    FERM_TYPE_ALIASES(FImplSrc,Src);
 public:
     // constructor
     TGaugeProp(const std::string name);
@@ -79,29 +80,30 @@ private:
     Solver       *solver_{nullptr};
 };
 
-MODULE_REGISTER_TMP(GaugeProp, TGaugeProp<FIMPL>, MFermion);
-MODULE_REGISTER_TMP(ZGaugeProp, TGaugeProp<ZFIMPL>, MFermion);
+MODULE_REGISTER_TMP(GaugePropSrcF, ARG(TGaugeProp<FIMPL,FIMPLF>), MFermion);
+MODULE_REGISTER_TMP(GaugeProp, ARG(TGaugeProp<FIMPL,FIMPL>), MFermion);
+MODULE_REGISTER_TMP(ZGaugeProp, ARG(TGaugeProp<ZFIMPL,ZFIMPL>), MFermion);
 
 /******************************************************************************
  *                      TGaugeProp implementation                             *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
-template <typename FImpl>
-TGaugeProp<FImpl>::TGaugeProp(const std::string name)
+template <typename FImpl, typename FImplSrc>
+TGaugeProp<FImpl,FImplSrc>::TGaugeProp(const std::string name)
 : Module<GaugePropPar>(name)
 {}
 
 // dependencies/products ///////////////////////////////////////////////////////
-template <typename FImpl>
-std::vector<std::string> TGaugeProp<FImpl>::getInput(void)
+template <typename FImpl, typename FImplSrc>
+std::vector<std::string> TGaugeProp<FImpl,FImplSrc>::getInput(void)
 {
     std::vector<std::string> in = {par().source, par().solver};
     
     return in;
 }
 
-template <typename FImpl>
-std::vector<std::string> TGaugeProp<FImpl>::getOutput(void)
+template <typename FImpl, typename FImplSrc>
+std::vector<std::string> TGaugeProp<FImpl,FImplSrc>::getOutput(void)
 {
     std::vector<std::string> out = {getName(), getName() + "_5d"};
     
@@ -109,23 +111,25 @@ std::vector<std::string> TGaugeProp<FImpl>::getOutput(void)
 }
 
 // setup ///////////////////////////////////////////////////////////////////////
-template <typename FImpl>
-void TGaugeProp<FImpl>::setup(void)
+template <typename FImpl, typename FImplSrc>
+void TGaugeProp<FImpl,FImplSrc>::setup(void)
 {
     Ls_ = env().getObjectLs(par().solver);
     
     envTmpLat(FermionField, "tmp");
     if (Ls_ > 1)
     {
-        envTmpLat(FermionField, "source", Ls_);
+        envTmpLat(FermionFieldSrc, "source", Ls_);
+        envTmpLat(PropagatorField, "fullSrc_conv", Ls_);
         envTmpLat(FermionField, "sol", Ls_);
     }
     else
     {
-        envTmpLat(FermionField, "source");
+        envTmpLat(FermionFieldSrc, "source");
+        envTmpLat(PropagatorField, "fullSrc_conv");
         envTmpLat(FermionField, "sol");
     }
-    if (envHasType(PropagatorField, par().source))
+    if (envHasType(PropagatorFieldSrc, par().source))
     {
         envCreateLat(PropagatorField, getName());
         if (Ls_ > 1)
@@ -155,8 +159,8 @@ void TGaugeProp<FImpl>::setup(void)
 }
 
 // execution ///////////////////////////////////////////////////////////////////
-template <typename FImpl>
-void TGaugeProp<FImpl>::solvePropagator(PropagatorField &prop, 
+template <typename FImpl, typename FImplSrc>
+void TGaugeProp<FImpl,FImplSrc>::solvePropagator(PropagatorField &prop, 
                                         PropagatorField &propPhysical,
                                         const PropagatorField &fullSrc)
 {
@@ -213,22 +217,26 @@ void TGaugeProp<FImpl>::solvePropagator(PropagatorField &prop,
     }
 }
 
-template <typename FImpl>
-void TGaugeProp<FImpl>::execute(void)
+template <typename FImpl, typename FImplSrc>
+void TGaugeProp<FImpl,FImplSrc>::execute(void)
 {
     LOG(Message) << "Computing quark propagator '" << getName() << "'"
                  << std::endl;
     
     std::string propName = (Ls_ == 1) ? getName() : (getName() + "_5d");
 
-    if (envHasType(PropagatorField, par().source))
+    if (envHasType(PropagatorFieldSrc, par().source))
     {
         auto &prop         = envGet(PropagatorField, propName);
         auto &propPhysical = envGet(PropagatorField, getName());
-        auto &fullSrc      = envGet(PropagatorField, par().source);
+        auto &fullSrc      = envGet(PropagatorFieldSrc, par().source);
+        // auto &fullSrc_conv = envGet(PropagatorField, );
+        envGetTmp(PropagatorField, fullSrc_conv);
+
+        precisionChange(fullSrc_conv, fullSrc);
 
         LOG(Message) << "Using source '" << par().source << "'" << std::endl;
-        solvePropagator(prop, propPhysical, fullSrc);
+        solvePropagator(prop, propPhysical, fullSrc_conv);
     }
     else
     {
