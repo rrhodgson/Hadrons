@@ -84,6 +84,7 @@ private:
 MODULE_REGISTER_TMP(GaugePropSrcF, ARG(TGaugeProp<FIMPL,FIMPLF>), MFermion);
 MODULE_REGISTER_TMP(GaugeProp, ARG(TGaugeProp<FIMPL,FIMPL>), MFermion);
 MODULE_REGISTER_TMP(ZGaugeProp, ARG(TGaugeProp<ZFIMPL,ZFIMPL>), MFermion);
+MODULE_REGISTER_TMP(ZGaugePropSrcF, ARG(TGaugeProp<ZFIMPL,ZFIMPLF>), MFermion);
 
 /******************************************************************************
  *                      TGaugeProp implementation                             *

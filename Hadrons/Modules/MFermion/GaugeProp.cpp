@@ -32,3 +32,4 @@ using namespace MFermion;
 template class Grid::Hadrons::MFermion::TGaugeProp<FIMPL,FIMPLF>;
 template class Grid::Hadrons::MFermion::TGaugeProp<FIMPL,FIMPL>;
 template class Grid::Hadrons::MFermion::TGaugeProp<ZFIMPL,ZFIMPL>;
+template class Grid::Hadrons::MFermion::TGaugeProp<ZFIMPL,ZFIMPLF>;
