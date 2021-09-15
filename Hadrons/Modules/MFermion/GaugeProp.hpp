@@ -77,6 +77,7 @@ private:
                          const PropagatorField &source);
 private:
     unsigned int Ls_;
+    unsigned int LsSrc_;
     Solver       *solver_{nullptr};
 };
 
@@ -115,18 +116,19 @@ template <typename FImpl, typename FImplSrc>
 void TGaugeProp<FImpl,FImplSrc>::setup(void)
 {
     Ls_ = env().getObjectLs(par().solver);
+    LsSrc_ = env().getObjectLs(par().source);
     
     envTmpLat(FermionField, "tmp");
+
+    envTmpLat(PropagatorField, "fullSrc_conv", LsSrc_);
     if (Ls_ > 1)
     {
         envTmpLat(FermionField, "source", Ls_);
-        envTmpLat(PropagatorField, "fullSrc_conv", Ls_);
         envTmpLat(FermionField, "sol", Ls_);
     }
     else
     {
         envTmpLat(FermionField, "source");
-        envTmpLat(PropagatorField, "fullSrc_conv");
         envTmpLat(FermionField, "sol");
     }
     if (envHasType(PropagatorFieldSrc, par().source))
