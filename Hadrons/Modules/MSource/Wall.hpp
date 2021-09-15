@@ -86,6 +86,7 @@ private:
 };
 
 MODULE_REGISTER_TMP(Wall, TWall<FIMPL>, MSource);
+MODULE_REGISTER_TMP(WallF, TWall<FIMPLF>, MSource);
 
 /******************************************************************************
  *                 TWall implementation                                       *
@@ -120,9 +121,9 @@ template <typename FImpl>
 void TWall<FImpl>::setup(void)
 {
     envCreateLat(PropagatorField, getName());
-    envCache(Lattice<iScalar<vInteger>>, tName_, 1, envGetGrid(LatticeComplex));
-    envCacheLat(LatticeComplex, momphName_);
-    envTmpLat(LatticeComplex, "coor");
+    envCache(Lattice<iScalar<vInteger>>, tName_, 1, envGetGrid(ComplexField));
+    envCacheLat(ComplexField, momphName_);
+    envTmpLat(ComplexField, "coor");
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -133,7 +134,7 @@ void TWall<FImpl>::execute(void)
                  << " with momentum " << par().mom << std::endl;
     
     auto  &src = envGet(PropagatorField, getName());
-    auto  &ph  = envGet(LatticeComplex, momphName_);
+    auto  &ph  = envGet(ComplexField, momphName_);
     auto  &t   = envGet(Lattice<iScalar<vInteger>>, tName_);
     
     if (!hasPhase_)
@@ -141,7 +142,7 @@ void TWall<FImpl>::execute(void)
         Complex           i(0.0,1.0);
         std::vector<Real> p;
 
-        envGetTmp(LatticeComplex, coor);
+        envGetTmp(ComplexField, coor);
         p  = strToVec<Real>(par().mom);
         ph = Zero();
         for(unsigned int mu = 0; mu < p.size(); mu++)
