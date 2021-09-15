@@ -119,13 +119,13 @@ void TGaugeProp<FImpl,FImplSrc>::setup(void)
     envTmpLat(FermionField, "tmp");
     if (Ls_ > 1)
     {
-        envTmpLat(FermionFieldSrc, "source", Ls_);
+        envTmpLat(FermionField, "source", Ls_);
         envTmpLat(PropagatorField, "fullSrc_conv", Ls_);
         envTmpLat(FermionField, "sol", Ls_);
     }
     else
     {
-        envTmpLat(FermionFieldSrc, "source");
+        envTmpLat(FermionField, "source");
         envTmpLat(PropagatorField, "fullSrc_conv");
         envTmpLat(FermionField, "sol");
     }
