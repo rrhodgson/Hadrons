@@ -120,7 +120,14 @@ void TGaugeProp<FImpl,FImplSrc>::setup(void)
     
     envTmpLat(FermionField, "tmp");
 
-    envTmpLat(PropagatorField, "fullSrc_conv", LsSrc_);
+    if (LsSrc_ > 1)
+    {
+	    envTmpLat(PropagatorField, "fullSrc_conv", LsSrc_);
+    }
+    else
+    { 
+	    envTmpLat(PropagatorField, "fullSrc_conv");
+    }
     if (Ls_ > 1)
     {
         envTmpLat(FermionField, "source", Ls_);
@@ -232,9 +239,7 @@ void TGaugeProp<FImpl,FImplSrc>::execute(void)
         auto &prop         = envGet(PropagatorField, propName);
         auto &propPhysical = envGet(PropagatorField, getName());
         auto &fullSrc      = envGet(PropagatorFieldSrc, par().source);
-        // auto &fullSrc_conv = envGet(PropagatorField, );
         envGetTmp(PropagatorField, fullSrc_conv);
-        fullSrc_conv.reset(fullSrc.Grid());
 
         precisionChange(fullSrc_conv, fullSrc);
 
