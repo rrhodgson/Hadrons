@@ -232,6 +232,7 @@ void TGaugeProp<FImpl,FImplSrc>::execute(void)
         auto &fullSrc      = envGet(PropagatorFieldSrc, par().source);
         // auto &fullSrc_conv = envGet(PropagatorField, );
         envGetTmp(PropagatorField, fullSrc_conv);
+        fullSrc_conv.reset(fullSrc.Grid());
 
         precisionChange(fullSrc_conv, fullSrc);
 
