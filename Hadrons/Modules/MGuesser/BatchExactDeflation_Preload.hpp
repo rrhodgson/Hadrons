@@ -22,11 +22,12 @@ public:
                                     unsigned int, batchSize);
 };
 
-template <typename EPack>
+template <typename FImpl, typename EPack>
 class TBatchExactDeflation_Preload: public Module<BatchExactDeflation_PreloadPar>
 {
 public:
-    typedef typename EPack::Field   Field;
+    typedef typename FImpl::FermionField Field;
+    typedef typename EPack::Field   PackField;
 public:
     // constructor
     TBatchExactDeflation_Preload(const std::string name);
@@ -42,19 +43,21 @@ public:
     virtual void execute(void);
 };
 
-MODULE_REGISTER_TMP(BatchExactDeflation_Preload, ARG(TBatchExactDeflation_Preload<BaseFermionEigenPack<FIMPL>>), MGuesser);
-MODULE_REGISTER_TMP(BatchExactDeflation_PreloadF, ARG(TBatchExactDeflation_Preload<BaseFermionEigenPack<FIMPLF>>), MGuesser);
+MODULE_REGISTER_TMP(BatchExactDeflation_Preload, ARG(TBatchExactDeflation_Preload<FIMPL,BaseFermionEigenPack<FIMPL>>), MGuesser);
+MODULE_REGISTER_TMP(BatchExactDeflation_PreloadF, ARG(TBatchExactDeflation_Preload<FIMPLF,BaseFermionEigenPack<FIMPLF>>), MGuesser);
+MODULE_REGISTER_TMP(BatchExactDeflation_Preload_OuterF, ARG(TBatchExactDeflation_Preload<FIMPL,BaseFermionEigenPack<FIMPLF>>), MGuesser);
 
 /******************************************************************************
  *                            The guesser itself                              *
  ******************************************************************************/
-template <typename EPack>
-class BatchExactDeflation_PreloadGuesser: public LinearFunction<typename EPack::Field>
+template <typename FImpl, typename EPack>
+class BatchExactDeflation_PreloadGuesser: public LinearFunction<typename FImpl::FermionField>
 {
 public:
-    typedef typename EPack::Field Field;
+    typedef typename FImpl::FermionField Field;
+    typedef typename EPack::Field PackField;
 public:
-    BatchExactDeflation_PreloadGuesser(const std::vector<Field> & evec,const std::vector<RealD> & eval, 
+    BatchExactDeflation_PreloadGuesser(const std::vector<PackField> & evec,const std::vector<RealD> & eval, 
                                         const unsigned int size,
                                         const unsigned int batchSize,
                                         const unsigned int traj)
@@ -74,6 +77,8 @@ public:
     {
         unsigned int nBatch = size_/batchSize_ + (((size_ % batchSize_) != 0) ? 1 : 0);
 
+        std::vector<Field> evec_cast(batchSize_, Field(in[0].Grid()) );
+
         LOG(Message) << "=== BATCH DEFLATION GUESSER START" << std::endl;
         LOG(Message) << "--- zero guesses" << std::endl;
         for (auto &v: out)
@@ -84,28 +89,31 @@ public:
         {
             unsigned int bsize = std::min(size_ - b, batchSize_);
 
+            for (unsigned int i = 0; i < bsize; ++i) {
+                precisionChange(evec_cast[i],evec_[b+i]);
+            }
+
             LOG(Message) << "--- batch " << b/batchSize_ << std::endl;
             LOG(Message) << "project" << std::endl;
-            projAccumulate(in, out, b, bsize);
+            projAccumulate(in, out, bsize, b, evec_cast);
         }
         
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
 private:
     void projAccumulate(const std::vector<Field> &in, std::vector<Field> &out,
-                        const unsigned int startIdx, const unsigned int batchSize)
+                        const unsigned int batchSize, const unsigned int startIdx, const std::vector<Field>& evec_cast)
     {
         for (unsigned int i = 0; i < batchSize; ++i)
         for (unsigned int j = 0; j < in.size(); ++j)
         {
-            unsigned int idx = startIdx + i;
             axpy(out[j], 
-                 TensorRemove(innerProduct(evec_[idx], in[j]))/eval_[idx], 
-                 evec_[idx], out[j]);
+                 TensorRemove(innerProduct(evec_cast[i], in[j]))/eval_[startIdx+i], 
+                 evec_cast[i], out[j]);
         }
     };
 private:
-    const std::vector<Field> &  evec_;
+    const std::vector<PackField> &  evec_;
     const std::vector<RealD> &  eval_;
     unsigned int          batchSize_;
     unsigned int          size_;
@@ -117,30 +125,30 @@ private:
  *                     TBatchExactDeflation_Preload implementation                    *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
-template <typename EPack>
-TBatchExactDeflation_Preload<EPack>::TBatchExactDeflation_Preload(const std::string name)
+template <typename FImpl, typename EPack>
+TBatchExactDeflation_Preload<FImpl, EPack>::TBatchExactDeflation_Preload(const std::string name)
 : Module<BatchExactDeflation_PreloadPar>(name)
 {}
 
 // dependencies/products ///////////////////////////////////////////////////////
-template <typename EPack>
-std::vector<std::string> TBatchExactDeflation_Preload<EPack>::getInput(void)
+template <typename FImpl, typename EPack>
+std::vector<std::string> TBatchExactDeflation_Preload<FImpl, EPack>::getInput(void)
 {
     std::vector<std::string> in = {par().eigenPack};
     
     return in;
 }
 
-template <typename EPack>
-std::vector<std::string> TBatchExactDeflation_Preload<EPack>::getOutput(void)
+template <typename FImpl, typename EPack>
+std::vector<std::string> TBatchExactDeflation_Preload<FImpl, EPack>::getOutput(void)
 {
     std::vector<std::string> out = {getName()};
     
     return out;
 }
 
-template <typename EPack>
-DependencyMap TBatchExactDeflation_Preload<EPack>::getObjectDependencies(void)
+template <typename FImpl, typename EPack>
+DependencyMap TBatchExactDeflation_Preload<FImpl, EPack>::getObjectDependencies(void)
 {
     DependencyMap dep;
     
@@ -150,8 +158,8 @@ DependencyMap TBatchExactDeflation_Preload<EPack>::getObjectDependencies(void)
 }
 
 // setup ///////////////////////////////////////////////////////////////////////
-template <typename EPack>
-void TBatchExactDeflation_Preload<EPack>::setup(void)
+template <typename FImpl, typename EPack>
+void TBatchExactDeflation_Preload<FImpl, EPack>::setup(void)
 {
     LOG(Message) << "Setting batch exact deflation guesser with eigenPack '" << par().eigenPack << "'"
                  << "' (" << par().size << " modes) and batch size " 
@@ -159,13 +167,13 @@ void TBatchExactDeflation_Preload<EPack>::setup(void)
 
     auto &epack = envGet(EPack, par().eigenPack);
 
-    envCreateDerived(LinearFunction<Field>, ARG(BatchExactDeflation_PreloadGuesser<EPack>),
+    envCreateDerived(LinearFunction<Field>, ARG(BatchExactDeflation_PreloadGuesser<FImpl,EPack>),
                      getName(), env().getObjectLs(par().eigenPack), epack.evec, epack.eval, par().size, par().batchSize, vm().getTrajectory());
 }
 
 // execution ///////////////////////////////////////////////////////////////////
-template <typename EPack>
-void TBatchExactDeflation_Preload<EPack>::execute(void)
+template <typename FImpl, typename EPack>
+void TBatchExactDeflation_Preload<FImpl, EPack>::execute(void)
 {
     
 }
