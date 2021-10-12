@@ -77,7 +77,10 @@ public:
     {
         unsigned int nBatch = size_/batchSize_ + (((size_ % batchSize_) != 0) ? 1 : 0);
 
+GridStopWatch w1;
+w1.Start();
         std::vector<Field> evec_cast(batchSize_, Field(in[0].Grid()) );
+w1.Stop();
 
         LOG(Message) << "=== BATCH DEFLATION GUESSER START" << std::endl;
         LOG(Message) << "--- zero guesses" << std::endl;
@@ -85,18 +88,37 @@ public:
         {
             v = Zero();
         }
+
+GridStopWatch w2;
+GridTime castAccum = w1.Elapsed()-w1.Elapsed();
+
+GridStopWatch w3;
+GridTime projAccum = w1.Elapsed()-w1.Elapsed();
+
         for (unsigned int b = 0; b < size_; b += batchSize_)
         {
             unsigned int bsize = std::min(size_ - b, batchSize_);
+w2.Start();
 
             for (unsigned int i = 0; i < bsize; ++i) {
                 precisionChange(evec_cast[i],evec_[b+i]);
             }
+w2.Stop();
+castAccum += w2.Elapsed();
+w2.Reset();
 
             LOG(Message) << "--- batch " << b/batchSize_ << std::endl;
             LOG(Message) << "project" << std::endl;
+w3.Start();
             projAccumulate(in, out, bsize, b, evec_cast);
+w3.Stop();
+projAccum += w3.Elapsed();
+w3.Reset();
         }
+
+std::cout << "create evec_cast(" << batchSize_ << ") took " << w1.Elapsed() << std::endl;
+std::cout << "Total precision change time " << castAccum << std::endl;
+std::cout << "Total projection time " << projAccum << std::endl;
         
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }

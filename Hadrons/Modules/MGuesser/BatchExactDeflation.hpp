@@ -45,6 +45,7 @@ public:
 
 MODULE_REGISTER_TMP(BatchExactDeflation, ARG(TBatchExactDeflation<FermionEigenPack<FIMPL>, GIMPL>), MGuesser);
 MODULE_REGISTER_TMP(BatchExactDeflationF, ARG(TBatchExactDeflation<FermionEigenPack<FIMPLF>, GIMPLF>), MGuesser);
+MODULE_REGISTER_TMP(BatchExactDeflationIo32, ARG(TBatchExactDeflation<FermionEigenPack<FIMPL,FIMPLF>, GIMPL>), MGuesser);
 
 /******************************************************************************
  *                            The guesser itself                              *
@@ -84,21 +85,40 @@ public:
         {
             v = Zero();
         }
+
+GridStopWatch w1;
+GridTime ioAccum = w1.Elapsed()-w1.Elapsed();
+
+GridStopWatch w2;
+GridTime projAccum = w2.Elapsed()-w2.Elapsed();
+
         for (unsigned int b = 0; b < epPar_.size; b += batchSize_)
         {
             unsigned int size = std::min(epPar_.size - b, batchSize_);
 
             LOG(Message) << "--- batch " << b/batchSize_ << std::endl;
             LOG(Message) << "I/O" << std::endl;
+
+w1.Start();
             epack_.read(epPar_.filestem, epPar_.multiFile, b, b + size, traj_);
+w1.Stop();
+ioAccum += w1.Elapsed();
+w1.Reset();
             if (transform_ != nullptr)
             {
                 epack_.gaugeTransform(*transform_);
             }
             LOG(Message) << "project" << std::endl;
+w2.Start();
             projAccumulate(in, out, size);
+w2.Stop();
+projAccum += w2.Elapsed();
+w2.Reset();
         }
         
+std::cout << "Total io time " << ioAccum << std::endl;
+std::cout << "Total projection time " << projAccum << std::endl;
+
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
 private:
