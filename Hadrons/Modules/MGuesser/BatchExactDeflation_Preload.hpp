@@ -82,6 +82,11 @@ public:
         std::vector<Field> evec_cast(evBatchSize_, Field(in[0].Grid()) );
         std::vector<RealD> eval_cast(evBatchSize_, 0.);
 
+        if (!std::is_same<Field,PackField>::value) {
+            evec_cast.resize(evBatchSize_, Field(in[0].Grid()) );
+            eval_cast.resize(evBatchSize_, 0.);
+        }
+
         LOG(Message) << "=== BATCH DEFLATION GUESSER START" << std::endl;
         LOG(Message) << "--- zero guesses" << std::endl;
         for (auto &v: out)
@@ -111,7 +116,7 @@ public:
                 unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
 
                 if (std::is_same<Field,PackField>::value) {
-			projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
+                    projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
                 } else {
                     projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
                 }
@@ -126,8 +131,8 @@ public:
     }
 private:
     void projAccumulateImpl(const std::vector<Field> &in, std::vector<Field> &out,
-                        const std::vector<Field>& evec_cast,
-                        const std::vector<RealD>& eval_cast,
+                        const std::vector<Field>& evec,
+                        const std::vector<RealD>& eval,
                         const unsigned int ei, const unsigned int ef,
                         const unsigned int si, const unsigned int sf,
                         std::true_type)
@@ -144,8 +149,8 @@ private:
         for (unsigned int j = si; j < sf; ++j)
         {
             axpy(out[j], 
-                 TensorRemove(innerProduct(evec_cast[i], in[j]))/eval_cast[i], 
-                 evec_cast[i], out[j]);
+                 TensorRemove(innerProduct(evec[i], in[j]))/eval[i], 
+                 evec[i], out[j]);
         }
         t += usecond();
         // performance (STREAM convention): innerProduct 2 reads + axpy 2 reads 1 write = 5 transfers
@@ -154,8 +159,8 @@ private:
 
     template<typename F1, typename F2>
     void projAccumulateImpl(const std::vector<F1> &in, std::vector<F1> &out,
-                        const std::vector<F2>& evec_cast,
-                        const std::vector<RealD>& eval_cast,
+                        const std::vector<F2>& evec,
+                        const std::vector<RealD>& eval,
                         const unsigned int ei, const unsigned int ef,
                         const unsigned int si, const unsigned int sf,
                         std::false_type)
@@ -170,11 +175,7 @@ private:
                         const std::vector<RealD>& eval,
                         const unsigned int ei, const unsigned int ef,
                         const unsigned int si, const unsigned int sf) {
-        projAccumulateImpl(in, out,
-                        evec,
-                        eval,
-                        ei, ef,
-                        si, sf,
+        projAccumulateImpl(in, out, evec, eval, ei, ef, si, sf,
                         std::integral_constant<bool, std::is_same<F1,F2>::value>{});
     }
 private:
