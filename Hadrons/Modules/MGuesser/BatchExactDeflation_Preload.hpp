@@ -76,13 +76,14 @@ public:
 
     virtual void operator() (const std::vector<Field> &in, std::vector<Field> &out)
     {
+        bool requires_cast = !(std::is_same<Field,PackField>::value);
+
         unsigned int nBatch = epSize_/evBatchSize_ + (((epSize_ % evBatchSize_) != 0) ? 1 : 0);
         unsigned int sourceSize = out.size();
 
-        std::vector<Field> evec_cast(evBatchSize_, Field(in[0].Grid()) );
-        std::vector<RealD> eval_cast(evBatchSize_, 0.);
-
-        if (!std::is_same<Field,PackField>::value) {
+        std::vector<Field> evec_cast;
+        std::vector<RealD> eval_cast;
+        if (requires_cast) {
             evec_cast.resize(evBatchSize_, Field(in[0].Grid()) );
             eval_cast.resize(evBatchSize_, 0.);
         }
@@ -102,7 +103,7 @@ public:
             unsigned int evBlockSize = std::min(epSize_ - bv, evBatchSize_);
 
             cast_t -= usecond();
-            if (!std::is_same<Field,PackField>::value) {
+            if (requires_cast) {
                 for (unsigned int i = 0; i < evBlockSize; ++i) {
                     precisionChange(evec_cast[i],evec_[bv+i]);
                     eval_cast[i] = eval_[bv+i];
@@ -115,16 +116,18 @@ public:
             {
                 unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
 
-                if (std::is_same<Field,PackField>::value) {
-                    projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
-                } else {
+                if (requires_cast) {
                     projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
+                } else {
+                    projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
                 }
             }
             proj_t += usecond();
         }
 
-        LOG(Message) << "Total precision change time " << cast_t/1.e6 << " s" << std::endl;
+        if (requires_cast) {
+            LOG(Message) << "Total precision change time " << cast_t/1.e6 << " s" << std::endl;
+        }
         LOG(Message) << "Total projection time " << proj_t/1.e6 << " s" <<  std::endl;
         
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
@@ -174,15 +177,16 @@ private:
                         const std::vector<F2>& evec,
                         const std::vector<RealD>& eval,
                         const unsigned int ei, const unsigned int ef,
-                        const unsigned int si, const unsigned int sf) {
+                        const unsigned int si, const unsigned int sf)
+    {
         projAccumulateImpl(in, out, evec, eval, ei, ef, si, sf,
                         std::integral_constant<bool, std::is_same<F1,F2>::value>{});
     }
 private:
     const std::vector<PackField> &  evec_;
     const std::vector<RealD> &  eval_;
-    unsigned int          evBatchSize_, sourceBatchSize_;
     unsigned int          epSize_;
+    unsigned int          evBatchSize_, sourceBatchSize_;
     int                   traj_;
 };
 
@@ -227,7 +231,7 @@ DependencyMap TBatchExactDeflation_Preload<FImpl, EPack>::getObjectDependencies(
 template <typename FImpl, typename EPack>
 void TBatchExactDeflation_Preload<FImpl, EPack>::setup(void)
 {
-    LOG(Message) << "Setting batch exact deflation guesser with eigenPack '" << par().eigenPack << "'"
+    LOG(Message) << "Setting batch exact deflation guesser with preloaded eigenPack '" << par().eigenPack << "'"
                  << "' (" << par().epSize << " modes) and batch size " 
                  << par().evBatchSize << ", and source batch size " 
                  << par().sourceBatchSize << std::endl;
