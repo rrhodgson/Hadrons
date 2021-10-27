@@ -97,9 +97,11 @@ public:
             unsigned int evBlockSize = std::min(epSize_ - bv, evBatchSize_);
 
             cast_t -= usecond();
-            for (unsigned int i = 0; i < evBlockSize; ++i) {
-                precisionChange(evec_cast[i],evec_[bv+i]);
-                eval_cast[i] = eval_[bv+i];
+            if (!std::is_same<Field,PackField>::value) {
+                for (unsigned int i = 0; i < evBlockSize; ++i) {
+                    precisionChange(evec_cast[i],evec_[bv+i]);
+                    eval_cast[i] = eval_[bv+i];
+                }
             }
             cast_t += usecond();
 
@@ -108,7 +110,11 @@ public:
             {
                 unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
 
-                projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
+                if (std::is_same<Field,PackField>::value) {
+                    projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
+                } else {
+                    projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
+                }
             }
             proj_t += usecond();
         }
@@ -119,11 +125,12 @@ public:
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
 private:
-    void projAccumulate(const std::vector<Field> &in, std::vector<Field> &out,
+    void projAccumulateImpl(const std::vector<Field> &in, std::vector<Field> &out,
                         const std::vector<Field>& evec_cast,
                         const std::vector<RealD>& eval_cast,
                         const unsigned int ei, const unsigned int ef,
-                        const unsigned int si, const unsigned int sf)
+                        const unsigned int si, const unsigned int sf,
+                        std::true_type)
     {
         GridBase *g       = in[0].Grid();
         double   lVol     = g->lSites();
@@ -144,6 +151,32 @@ private:
         // performance (STREAM convention): innerProduct 2 reads + axpy 2 reads 1 write = 5 transfers
         LOG(Message) << "projAccumulate: " << t << " us | " << 5.*nIt*lSizeGB << " GB | " << 5.*nIt*lSizeGB/t*1.0e6 << " GB/s" << std::endl;
     };
+
+    template<typename F1, typename F2>
+    void projAccumulateImpl(const std::vector<F1> &in, std::vector<F1> &out,
+                        const std::vector<F2>& evec_cast,
+                        const std::vector<RealD>& eval_cast,
+                        const unsigned int ei, const unsigned int ef,
+                        const unsigned int si, const unsigned int sf,
+                        std::false_type)
+    {
+        assert(0 && "Type mismatch");
+    };
+
+
+    template<typename F1, typename F2>
+    void projAccumulate(const std::vector<F1> &in, std::vector<F1> &out,
+                        const std::vector<F2>& evec_cast,
+                        const std::vector<RealD>& eval_cast,
+                        const unsigned int ei, const unsigned int ef,
+                        const unsigned int si, const unsigned int sf) {
+        projAccumulateImpl(in, out,
+                        evec_cast,
+                        eval_cast,
+                        ei, ef,
+                        si, sf,
+                        std::integral_constant<bool, std::is_same<Field,PackField>::value>{});
+    }
 private:
     const std::vector<PackField> &  evec_;
     const std::vector<RealD> &  eval_;
