@@ -18,7 +18,8 @@ class BatchExactDeflationPar: Serializable
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(BatchExactDeflationPar,
                                     MIO::LoadEigenPackPar, eigenPack,
-                                    unsigned int, batchSize);
+                                    unsigned int, evBatchSize,
+                                    unsigned int, sourceBatchSize);
 };
 
 template <typename Pack, typename GImpl>
@@ -45,7 +46,6 @@ public:
 
 MODULE_REGISTER_TMP(BatchExactDeflation, ARG(TBatchExactDeflation<FermionEigenPack<FIMPL>, GIMPL>), MGuesser);
 MODULE_REGISTER_TMP(BatchExactDeflationF, ARG(TBatchExactDeflation<FermionEigenPack<FIMPLF>, GIMPLF>), MGuesser);
-MODULE_REGISTER_TMP(BatchExactDeflationIo32, ARG(TBatchExactDeflation<FermionEigenPack<FIMPL,FIMPLF>, GIMPL>), MGuesser);
 
 /******************************************************************************
  *                            The guesser itself                              *
@@ -58,18 +58,20 @@ public:
     GAUGE_TYPE_ALIASES(GImpl,);
 public:
     BatchExactDeflationGuesser(const MIO::LoadEigenPackPar &epPar, 
-                               const unsigned int batchSize,
+                               const unsigned int evBatchSize,
+                               const unsigned int sourceBatchSize,
                                GridBase *grid, GridBase *gridIo,
                                const int traj, 
                                const GaugeLinkField *transform = nullptr)
     : epPar_(epPar)
-    , batchSize_(batchSize)
+    , evBatchSize_(evBatchSize)
+    , sourceBatchSize_(sourceBatchSize)
     , grid_(grid)
     , gridIo_(gridIo)
     , traj_(traj)
     , transform_(transform)
     {
-        epack_.init(batchSize_, grid_, gridIo_);
+        epack_.init(evBatchSize_, grid_, gridIo_);
     };
 
     virtual void operator() (const Field &in, Field &out)
@@ -77,7 +79,8 @@ public:
 
     virtual void operator() (const std::vector<Field> &in, std::vector<Field> &out)
     {
-        unsigned int nBatch = epPar_.size/batchSize_ + (((epPar_.size % batchSize_) != 0) ? 1 : 0);
+        unsigned int nBatch     = epPar_.size/evBatchSize_ + (((epPar_.size % evBatchSize_) != 0) ? 1 : 0);
+        unsigned int sourceSize = out.size();
 
         LOG(Message) << "=== BATCH DEFLATION GUESSER START" << std::endl;
         LOG(Message) << "--- zero guesses" << std::endl;
@@ -85,57 +88,55 @@ public:
         {
             v = Zero();
         }
-
-GridStopWatch w1;
-GridTime ioAccum = w1.Elapsed()-w1.Elapsed();
-
-GridStopWatch w2;
-GridTime projAccum = w2.Elapsed()-w2.Elapsed();
-
-        for (unsigned int b = 0; b < epPar_.size; b += batchSize_)
+        for (unsigned int bv = 0; bv < epPar_.size; bv += evBatchSize_)
         {
-            unsigned int size = std::min(epPar_.size - b, batchSize_);
+            unsigned int evBlockSize = std::min(epPar_.size - bv, evBatchSize_);
 
-            LOG(Message) << "--- batch " << b/batchSize_ << std::endl;
+            LOG(Message) << "--- batch " << bv/evBatchSize_ << std::endl;
             LOG(Message) << "I/O" << std::endl;
-
-w1.Start();
-            epack_.read(epPar_.filestem, epPar_.multiFile, b, b + size, traj_);
-w1.Stop();
-ioAccum += w1.Elapsed();
-w1.Reset();
+            epack_.read(epPar_.filestem, epPar_.multiFile, bv, bv + evBlockSize, traj_);
             if (transform_ != nullptr)
             {
                 epack_.gaugeTransform(*transform_);
             }
             LOG(Message) << "project" << std::endl;
-w2.Start();
-            projAccumulate(in, out, size);
-w2.Stop();
-projAccum += w2.Elapsed();
-w2.Reset();
+            for (unsigned int bs = 0; bs < sourceSize; bs += sourceBatchSize_)
+            {
+                unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
+
+                projAccumulate(in, out, evBlockSize, bs, bs + sourceBlockSize);
+            }
         }
         
-std::cout << "Total io time " << ioAccum << std::endl;
-std::cout << "Total projection time " << projAccum << std::endl;
-
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
 private:
     void projAccumulate(const std::vector<Field> &in, std::vector<Field> &out,
-                        const unsigned int batchSize)
+                        const unsigned int evBatchSize,
+                        const unsigned int si, const unsigned int sf)
     {
-        for (unsigned int i = 0; i < batchSize; ++i)
-        for (unsigned int j = 0; j < in.size(); ++j)
+        GridBase *g       = in[0].Grid();
+        double   lVol     = g->lSites();
+        double   siteSize = sizeof(typename Field::scalar_object);
+        double   lSizeGB  = lVol*siteSize/1024./1024./1024.;
+        double   nIt      = evBatchSize*(sf - si);
+        double   t        = 0.;
+        
+        t -= usecond();
+        for (unsigned int i = 0; i < evBatchSize; ++i)
+        for (unsigned int j = si; j < sf; ++j)
         {
             axpy(out[j], 
                  TensorRemove(innerProduct(epack_.evec[i], in[j]))/epack_.eval[i], 
                  epack_.evec[i], out[j]);
         }
+        t += usecond();
+        // performance (STREAM convention): innerProduct 2 reads + axpy 2 reads 1 write = 5 transfers
+        LOG(Message) << "projAccumulate: " << t << " us | " << 5.*nIt*lSizeGB << " GB | " << 5.*nIt*lSizeGB/t*1.0e6 << " GB/s" << std::endl;
     };
 private:
     MIO::LoadEigenPackPar epPar_;
-    unsigned int          batchSize_;
+    unsigned int          evBatchSize_, sourceBatchSize_;
     GridBase              *grid_, *gridIo_;
     int                   traj_;
     Pack                  epack_;
@@ -196,8 +197,9 @@ void TBatchExactDeflation<Pack, GImpl>::setup(void)
 
     LOG(Message) << "Setting batch exact deflation guesser with eigenpack "
                  << "located at '" << par().eigenPack.filestem
-                 << "' (" << par().eigenPack.size << " modes) and batch size " 
-                 << par().batchSize << std::endl;
+                 << "' (" << par().eigenPack.size << " modes), EV batch size " 
+                 << par().evBatchSize << ", and source batch size " 
+                 << par().sourceBatchSize << std::endl;
     if (!par().eigenPack.gaugeXform.empty())
     {
         transform = &envGet(GaugeLinkField, par().eigenPack.gaugeXform);
@@ -209,8 +211,8 @@ void TBatchExactDeflation<Pack, GImpl>::setup(void)
         gridIo = getGrid<FieldIo>(par().eigenPack.redBlack, par().eigenPack.Ls);
     }
     envCreateDerived(LinearFunction<Field>, ARG(BatchExactDeflationGuesser<Pack, GImpl>),
-                     getName(), par().eigenPack.Ls, par().eigenPack, par().batchSize,
-                     gridRb, gridIo, vm().getTrajectory(), transform);
+                     getName(), par().eigenPack.Ls, par().eigenPack, par().evBatchSize,
+                     par().sourceBatchSize, gridRb, gridIo, vm().getTrajectory(), transform);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
