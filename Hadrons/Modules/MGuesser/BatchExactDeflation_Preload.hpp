@@ -18,8 +18,9 @@ class BatchExactDeflation_PreloadPar: Serializable
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(BatchExactDeflation_PreloadPar,
                                     std::string, eigenPack,
-                                    unsigned int, size,
-                                    unsigned int, batchSize);
+                                    unsigned int, epSize,
+                                    unsigned int, evBatchSize,
+                                    unsigned int, sourceBatchSize);
 };
 
 template <typename FImpl, typename EPack>
@@ -58,29 +59,28 @@ public:
     typedef typename EPack::Field PackField;
 public:
     BatchExactDeflation_PreloadGuesser(const std::vector<PackField> & evec,const std::vector<RealD> & eval, 
-                                        const unsigned int size,
-                                        const unsigned int batchSize,
+                                        const unsigned int epSize,
+                                        const unsigned int evBatchSize,
+                                        const unsigned int sourceBatchSize,
                                         const unsigned int traj)
     : evec_(evec)
     , eval_(eval)
-    , size_(size)
-    , batchSize_(batchSize)
+    , epSize_(epSize)
+    , evBatchSize_(evBatchSize)
+    , sourceBatchSize_(sourceBatchSize)
     , traj_(traj)
-    {
-
-    };
+    {};
 
     virtual void operator() (const Field &in, Field &out)
     {}
 
     virtual void operator() (const std::vector<Field> &in, std::vector<Field> &out)
     {
-        unsigned int nBatch = size_/batchSize_ + (((size_ % batchSize_) != 0) ? 1 : 0);
+        unsigned int nBatch = epSize_/evBatchSize_ + (((epSize_ % evBatchSize_) != 0) ? 1 : 0);
+        unsigned int sourceSize = out.size();
 
-GridStopWatch w1;
-w1.Start();
-        std::vector<Field> evec_cast(batchSize_, Field(in[0].Grid()) );
-w1.Stop();
+        std::vector<Field> evec_cast(evBatchSize_, Field(in[0].Grid()) );
+        std::vector<RealD> eval_cast(evBatchSize_, 0.);
 
         LOG(Message) << "=== BATCH DEFLATION GUESSER START" << std::endl;
         LOG(Message) << "--- zero guesses" << std::endl;
@@ -89,56 +89,66 @@ w1.Stop();
             v = Zero();
         }
 
-GridStopWatch w2;
-GridTime castAccum = w1.Elapsed()-w1.Elapsed();
+        double cast_t = 0.;
+        double proj_t = 0.;
 
-GridStopWatch w3;
-GridTime projAccum = w1.Elapsed()-w1.Elapsed();
-
-        for (unsigned int b = 0; b < size_; b += batchSize_)
+        for (unsigned int bv = 0; bv < epSize_; bv += evBatchSize_)
         {
-            unsigned int bsize = std::min(size_ - b, batchSize_);
-w2.Start();
+            unsigned int evBlockSize = std::min(epSize_ - bv, evBatchSize_);
 
-            for (unsigned int i = 0; i < bsize; ++i) {
-                precisionChange(evec_cast[i],evec_[b+i]);
+            cast_t -= usecond();
+            for (unsigned int i = 0; i < evBlockSize; ++i) {
+                precisionChange(evec_cast[i],evec_[bv+i]);
+                eval_cast[i] = eval_[bv+i];
             }
-w2.Stop();
-castAccum += w2.Elapsed();
-w2.Reset();
+            cast_t += usecond();
 
-            LOG(Message) << "--- batch " << b/batchSize_ << std::endl;
-            LOG(Message) << "project" << std::endl;
-w3.Start();
-            projAccumulate(in, out, bsize, b, evec_cast);
-w3.Stop();
-projAccum += w3.Elapsed();
-w3.Reset();
+            proj_t -= usecond();
+            for (unsigned int bs = 0; bs < sourceSize; bs += sourceBatchSize_)
+            {
+                unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
+
+                projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
+            }
+            proj_t += usecond();
         }
 
-std::cout << "create evec_cast(" << batchSize_ << ") took " << w1.Elapsed() << std::endl;
-std::cout << "Total precision change time " << castAccum << std::endl;
-std::cout << "Total projection time " << projAccum << std::endl;
+        std::cout << "Total precision change time " << cast_t << std::endl;
+        std::cout << "Total projection time " << proj_t << std::endl;
         
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
 private:
     void projAccumulate(const std::vector<Field> &in, std::vector<Field> &out,
-                        const unsigned int batchSize, const unsigned int startIdx, const std::vector<Field>& evec_cast)
+                        const std::vector<Field>& evec_cast,
+                        const std::vector<RealD>& eval_cast,
+                        const unsigned int ei, const unsigned int ef,
+                        const unsigned int si, const unsigned int sf)
     {
-        for (unsigned int i = 0; i < batchSize; ++i)
-        for (unsigned int j = 0; j < in.size(); ++j)
+        GridBase *g       = in[0].Grid();
+        double   lVol     = g->lSites();
+        double   siteSize = sizeof(typename Field::scalar_object);
+        double   lSizeGB  = lVol*siteSize/1024./1024./1024.;
+        double   nIt      = (ef-ei)*(sf - si);
+        double   t        = 0.;
+
+        t -= usecond();
+        for (unsigned int i = ei; i < ef; ++i)
+        for (unsigned int j = si; j < sf; ++j)
         {
             axpy(out[j], 
-                 TensorRemove(innerProduct(evec_cast[i], in[j]))/eval_[startIdx+i], 
+                 TensorRemove(innerProduct(evec_cast[i], in[j]))/eval_cast[i], 
                  evec_cast[i], out[j]);
         }
+        t += usecond();
+        // performance (STREAM convention): innerProduct 2 reads + axpy 2 reads 1 write = 5 transfers
+        LOG(Message) << "projAccumulate: " << t << " us | " << 5.*nIt*lSizeGB << " GB | " << 5.*nIt*lSizeGB/t*1.0e6 << " GB/s" << std::endl;
     };
 private:
     const std::vector<PackField> &  evec_;
     const std::vector<RealD> &  eval_;
-    unsigned int          batchSize_;
-    unsigned int          size_;
+    unsigned int          evBatchSize_, sourceBatchSize_;
+    unsigned int          epSize_;
     int                   traj_;
 };
 
@@ -184,13 +194,16 @@ template <typename FImpl, typename EPack>
 void TBatchExactDeflation_Preload<FImpl, EPack>::setup(void)
 {
     LOG(Message) << "Setting batch exact deflation guesser with eigenPack '" << par().eigenPack << "'"
-                 << "' (" << par().size << " modes) and batch size " 
-                 << par().batchSize << std::endl;
+                 << "' (" << par().epSize << " modes) and batch size " 
+                 << par().evBatchSize << ", and source batch size " 
+                 << par().sourceBatchSize << std::endl;
 
     auto &epack = envGet(EPack, par().eigenPack);
 
     envCreateDerived(LinearFunction<Field>, ARG(BatchExactDeflation_PreloadGuesser<FImpl,EPack>),
-                     getName(), env().getObjectLs(par().eigenPack), epack.evec, epack.eval, par().size, par().batchSize, vm().getTrajectory());
+                     getName(), env().getObjectLs(par().eigenPack),
+                     epack.evec, epack.eval, par().epSize, par().evBatchSize,
+                     par().sourceBatchSize, vm().getTrajectory());
 }
 
 // execution ///////////////////////////////////////////////////////////////////
