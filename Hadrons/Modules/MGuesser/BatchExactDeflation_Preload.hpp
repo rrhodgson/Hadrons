@@ -111,7 +111,7 @@ public:
                 unsigned int sourceBlockSize = std::min(sourceSize - bs, sourceBatchSize_);
 
                 if (std::is_same<Field,PackField>::value) {
-                    projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
+			projAccumulate(in, out, evec_, eval_, bv, bv + evBlockSize, bs, bs + sourceBlockSize);
                 } else {
                     projAccumulate(in, out, evec_cast, eval_cast, 0, evBlockSize, bs, bs + sourceBlockSize);
                 }
@@ -119,8 +119,8 @@ public:
             proj_t += usecond();
         }
 
-        std::cout << "Total precision change time " << cast_t << std::endl;
-        std::cout << "Total projection time " << proj_t << std::endl;
+        LOG(Message) << "Total precision change time " << cast_t/1.e6 << " s" << std::endl;
+        LOG(Message) << "Total projection time " << proj_t/1.e6 << " s" <<  std::endl;
         
         LOG(Message) << "=== BATCH DEFLATION GUESSER END" << std::endl;
     }
@@ -166,16 +166,16 @@ private:
 
     template<typename F1, typename F2>
     void projAccumulate(const std::vector<F1> &in, std::vector<F1> &out,
-                        const std::vector<F2>& evec_cast,
-                        const std::vector<RealD>& eval_cast,
+                        const std::vector<F2>& evec,
+                        const std::vector<RealD>& eval,
                         const unsigned int ei, const unsigned int ef,
                         const unsigned int si, const unsigned int sf) {
         projAccumulateImpl(in, out,
-                        evec_cast,
-                        eval_cast,
+                        evec,
+                        eval,
                         ei, ef,
                         si, sf,
-                        std::integral_constant<bool, std::is_same<Field,PackField>::value>{});
+                        std::integral_constant<bool, std::is_same<F1,F2>::value>{});
     }
 private:
     const std::vector<PackField> &  evec_;
