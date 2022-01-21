@@ -121,7 +121,8 @@ int main(int argc, char *argv[])
     MContraction::SigmaToNucleonEye::Par EyePar;
     EyePar.output  = "SigmaToNucleon/Eye_u";
     EyePar.qqLoop = "Qpt_l_loop";
-    EyePar.quSpec = "Qpt_u_spec";
+    EyePar.quSpec1 = "Qpt_u_spec";
+    EyePar.quSpec2 = "Qpt_u_spec";
     EyePar.qdTf   = "Qpt_l_4";
     EyePar.qsTi   = "Qpt_s_0";
     EyePar.tf    = 4;
