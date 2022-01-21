@@ -74,7 +74,8 @@ class SigmaToNucleonEyePar: Serializable
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(SigmaToNucleonEyePar,
                                     std::string, qqLoop,
-                                    std::string, quSpec,
+                                    std::string, quSpec1,
+                                    std::string, quSpec2,
                                     std::string, qdTf,
                                     std::string, qsTi,
                                     unsigned int,   tf,
@@ -136,7 +137,7 @@ TSigmaToNucleonEye<FImpl>::TSigmaToNucleonEye(const std::string name)
 template <typename FImpl>
 std::vector<std::string> TSigmaToNucleonEye<FImpl>::getInput(void)
 {
-    std::vector<std::string> input = {par().qqLoop, par().quSpec, par().qdTf, par().qsTi, par().sink};
+    std::vector<std::string> input = {par().qqLoop, par().quSpec1, par().quSpec2, par().qdTf, par().qsTi, par().sink};
     
     return input;
 }
@@ -185,10 +186,12 @@ void TSigmaToNucleonEye<FImpl>::execute(void)
     r.info.gammaBNucl  = GammaB.g;
 
     auto &qqLoop    = envGet(PropagatorField, par().qqLoop);
-    auto &quSpec    = envGet(SlicedPropagator, par().quSpec);
+    auto &quSpec1   = envGet(SlicedPropagator, par().quSpec1);
+    auto &quSpec2   = envGet(SlicedPropagator, par().quSpec2);
     auto &qdTf      = envGet(PropagatorField, par().qdTf);
     auto &qsTi      = envGet(PropagatorField, par().qsTi);
-    auto qut         = quSpec[par().tf];
+    auto qut1       = quSpec1[par().tf];
+    auto qut2       = quSpec2[par().tf];
 
 
     const std::array<std::pair<const Gamma::Algebra,const Gamma::Algebra>, 16> gH = {{
@@ -221,7 +224,7 @@ void TSigmaToNucleonEye<FImpl>::execute(void)
       r.info.gammaH2 = GH2.g;
       //Operator Q1, equivalent to the two-trace case in the rare-kaons module
       c=Zero();
-      BaryonUtils<FIMPL>::SigmaToNucleonEye(qqLoop,qut,qdTf,qsTi,GH1,GH2,GammaB,GammaB,"Q1",c);
+      BaryonUtils<FIMPL>::SigmaToNucleonEye(qqLoop,qut1,qut2,qdTf,qsTi,GH1,GH2,GammaB,GammaB,"Q1",c);
       sliceSum(c,buf,Tp);
       r.corr.clear();
       for (unsigned int t = 0; t < buf.size(); ++t)
@@ -232,7 +235,7 @@ void TSigmaToNucleonEye<FImpl>::execute(void)
       result.push_back(r);
       //Operator Q2, equivalent to the one-trace case in the rare-kaons module
       c=Zero();
-      BaryonUtils<FIMPL>::SigmaToNucleonEye(qqLoop,qut,qdTf,qsTi,GH1,GH2,GammaB,GammaB,"Q2",c);
+      BaryonUtils<FIMPL>::SigmaToNucleonEye(qqLoop,qut1,qut2,qdTf,qsTi,GH1,GH2,GammaB,GammaB,"Q2",c);
       sliceSum(c,buf,Tp);
       r.corr.clear();
       for (unsigned int t = 0; t < buf.size(); ++t)
