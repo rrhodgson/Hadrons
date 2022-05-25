@@ -634,7 +634,10 @@ void VirtualMachine::makeMemoryProfile(void)
     bool hmsg    = HadronsLogMessage.isActive();
     bool gmsg    = GridLogMessage.isActive();
     bool err     = HadronsLogError.isActive();
-    auto program = getModuleGraph().topoSort();
+    // auto program = getModuleGraph().topoSort();
+    std::vector<unsigned int> program;
+    for (int i=0; i<getModuleGraph().size(); i++)
+        program.push_back(i);
 
     resetProfile();
     profile_.module.resize(getNModule());

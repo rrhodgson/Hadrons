@@ -293,6 +293,11 @@ void Application::schedule(void)
     }
 }
 
+void Application::makeMemoryProfile(void)
+{
+    vm().makeMemoryProfile();
+}
+
 void Application::saveSchedule(const std::string filename)
 {
     LOG(Message) << "Saving current schedule to '" << filename << "'..."

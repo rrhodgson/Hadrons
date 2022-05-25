@@ -193,13 +193,13 @@ public:
     void                executeProgram(const std::vector<std::string> &p);
     // generate result DB
     void                generateResultDb(void);
+    void makeMemoryProfile(void);
 private:
     // environment shortcut
     DEFINE_ENV_ALIAS;
     // module graph
     void makeModuleGraph(void);
     // memory profile
-    void makeMemoryProfile(void);
     void resetProfile(void);
     void resizeProfile(void);
     void updateProfile(const unsigned int address);
