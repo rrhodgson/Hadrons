@@ -637,8 +637,9 @@ void VirtualMachine::makeMemoryProfile(void)
     // auto program = getModuleGraph().topoSort();
     std::vector<unsigned int> program;
     int s = getModuleGraph().size();
+    program.resize(s);
     for (int i=0; i<s; i++)
-        program.push_back(i);
+        program[i] = i;
 
     resetProfile();
     profile_.module.resize(getNModule());
