@@ -636,7 +636,8 @@ void VirtualMachine::makeMemoryProfile(void)
     bool err     = HadronsLogError.isActive();
     // auto program = getModuleGraph().topoSort();
     std::vector<unsigned int> program;
-    for (int i=0; i<getModuleGraph().size(); i++)
+    int s = getModuleGraph().size();
+    for (int i=0; i<s; i++)
         program.push_back(i);
 
     resetProfile();
