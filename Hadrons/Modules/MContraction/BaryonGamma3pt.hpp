@@ -397,11 +397,35 @@ void TBaryonGamma3pt<FImpl>::execute(void)
     SlicedPropagator propQL2_slice[6];
     SlicedPropagator propQL3_slice[6];
 
+    class applySink {
+    public:
+        std::map<std::pair<PropagatorField const*,SinkFn const*> , SlicedPropagator> prop_sink_map;
+
+        SlicedPropagator operator()(const PropagatorField& prop, const SinkFn* sinkPtr) {
+            SlicedPropagator ret;
+
+            std::pair<PropagatorField const*,SinkFn const*> tmp_pair(&prop, sinkPtr);
+
+            auto it = prop_sink_map.find(tmp_pair);
+
+            if ( it != prop_sink_map.end()) {
+                // LOG(Debug) << "Reusing " << (it->first) << std::endl;
+                ret = it->second;
+            } else {
+                // LOG(Debug) << "Sinking prop " << tmp_pair << std::endl;
+                ret = (*sinkPtr)(prop);
+                prop_sink_map[tmp_pair] = ret;
+            }
+            return ret;
+        }
+    };
+
+    applySink apSnk;
     for (int ie=0; ie<6; ie++) 
     {
-        propQL1_slice[ie] = (*sink[epsilon[ie][0]])(propQL1);
-        propQL2_slice[ie] = (*sink[epsilon[ie][1]])(propQL2);
-        propQL3_slice[ie] = (*sink[epsilon[ie][2]])(propQL3);
+        propQL1_slice[ie] = apSnk(propQL1 , sink[epsilon[ie][0]]);
+        propQL2_slice[ie] = apSnk(propQL2 , sink[epsilon[ie][1]]);
+        propQL3_slice[ie] = apSnk(propQL3 , sink[epsilon[ie][2]]);
     }
 
 
