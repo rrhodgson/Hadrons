@@ -333,9 +333,8 @@ void TBaryonGamma3pt<FImpl>::execute(void)
         LOG(Message) << "  note: qR3 was specified as '" << par().qR3 << "' but is not used" << std::endl;
     LOG(Message) << "using sinks '" << par().sink1 << "', '" << par().sink2 << "' and '" << par().sink3 << "'" << std::endl;
     for (int iG = 0; iG < gammaLRList.size(); iG++)
-        LOG(Message) << "  with (Gamma^A,Gamma^B)_left = ( " << gammaLRList[iG].first.first << " , " << gammaLRList[iG].first.second << "') and (Gamma^A,Gamma^B)_right = ( " << gammaLRList[iG].second.first << " , " << gammaLRList[iG].second.second << ")" << std::endl; 
-    for (int iG = 0; iG < gammaJList.size(); iG++)
-        LOG(Message) << "  inserting gammaJ = (" << gammaJList[iG] << ")" << std::endl;
+        LOG(Message) << "  with (Gamma^A,Gamma^B)_left in " << gammaLRList[iG].first.first << " , " << gammaLRList[iG].first.second << "') and (Gamma^A,Gamma^B)_right = ( " << gammaLRList[iG].second.first << " , " << gammaLRList[iG].second.second << ")" << std::endl; 
+    LOG(Message) << "  inserting gammaJ in " << gammaJList << std::endl;
     LOG(Message) << "with momentum " << mom_ << std::endl;
 
 
@@ -504,8 +503,6 @@ void TBaryonGamma3pt<FImpl>::execute(void)
         
             if (mom_[0] != 0 || mom_[1] != 0 || mom_[2] != 0) 
             {
-                LOG(Message) << "Adding momentum phase " << mom_ << std::endl;
-
                 Complex           i(0.0,1.0);
 
                 envGetTmp(LatticeComplex, coor);
