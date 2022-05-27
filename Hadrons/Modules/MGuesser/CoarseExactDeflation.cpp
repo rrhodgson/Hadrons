@@ -6,3 +6,6 @@ using namespace MGuesser;
 
 template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>>;
 template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS>>;
+
+template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,30>>;
+template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,30>>;

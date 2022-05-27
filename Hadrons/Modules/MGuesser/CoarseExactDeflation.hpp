@@ -45,6 +45,9 @@ public:
 MODULE_REGISTER_TMP(CoarseExactDeflation, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>>), MGuesser);
 MODULE_REGISTER_TMP(CoarseExactDeflationF, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS>>), MGuesser);
 
+MODULE_REGISTER_TMP(CoarseExactDeflation30, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,30>>), MGuesser);
+MODULE_REGISTER_TMP(CoarseExactDeflation30F, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,30>>), MGuesser);
+
 /******************************************************************************
  *                 TExactDeflation implementation                             *
  ******************************************************************************/
