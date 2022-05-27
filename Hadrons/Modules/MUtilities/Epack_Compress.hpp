@@ -46,8 +46,8 @@ public:
                                     std::string,   blockSize,
                                     int,           fineSize,
                                     int,           coarseSize,
-                                    // std::string,   output,
-                                    // bool,          multiFile,
+                                    std::string,   output,
+                                    bool,          multiFile,
                                     std::string,   epack,
                                     int,           size);
 };
@@ -147,6 +147,7 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
     auto &finePack     = envGet(BasePack, par().epack);
 
     int sizeFine = par().fineSize;
+    int sizeCoarse = par().coarseSize;
 
     LOG(Message) << "Taking the first " << sizeFine << " fine vectors" << std::endl;
     for (int i=0; i<sizeFine; i++) {
@@ -166,6 +167,16 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
         blockProject(coarsePack.evecCoarse[i], finePack.evec[i], coarsePack.evec);
         coarsePack.evalCoarse[i] = finePack.eval[i];
     }
+
+    if (!par().output.empty())
+    {
+        std::cout << "Write " << sizeFine << " fine vectors" << std::endl;
+        coarsePack.writeFine(par().output, par().multiFile, vm().getTrajectory());
+        std::cout << "Write " << sizeCoarse << " coarse vectors" << std::endl;
+        coarsePack.writeCoarse(par().output, par().multiFile, vm().getTrajectory());
+    }
+
+
 }
 
 END_MODULE_NAMESPACE
