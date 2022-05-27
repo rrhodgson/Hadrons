@@ -88,6 +88,11 @@ MODULE_REGISTER_TMP(Epack_Compress30, ARG(TEpack_Compress<FIMPL, 30>), MUtilitie
 MODULE_REGISTER_TMP(Epack_Compress150, ARG(TEpack_Compress<FIMPL, 150>), MUtilities);
 
 
+MODULE_REGISTER_TMP(Epack_CompressF, ARG(TEpack_Compress<FIMPLF, HADRONS_DEFAULT_LANCZOS_NBASIS>), MUtilities);
+MODULE_REGISTER_TMP(Epack_CompressF30, ARG(TEpack_Compress<FIMPLF, 30>), MUtilities);
+MODULE_REGISTER_TMP(Epack_CompressF150, ARG(TEpack_Compress<FIMPLF, 150>), MUtilities);
+
+
 /******************************************************************************
  *                 TEpack_Compress implementation                      *
  ******************************************************************************/
