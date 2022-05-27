@@ -85,7 +85,7 @@ public:
 
 MODULE_REGISTER_TMP(Epack_Compress, ARG(TEpack_Compress<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS>), MUtilities);
 MODULE_REGISTER_TMP(Epack_Compress30, ARG(TEpack_Compress<FIMPL, 30>), MUtilities);
-MODULE_REGISTER_TMP(Epack_Compress30, ARG(TEpack_Compress<FIMPL, 150>), MUtilities);
+MODULE_REGISTER_TMP(Epack_Compress150, ARG(TEpack_Compress<FIMPL, 150>), MUtilities);
 
 
 /******************************************************************************
