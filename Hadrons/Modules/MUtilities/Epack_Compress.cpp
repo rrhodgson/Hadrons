@@ -31,3 +31,4 @@ using namespace MUtilities;
 
 template class Grid::Hadrons::MUtilities::TEpack_Compress<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>;
 template class Grid::Hadrons::MUtilities::TEpack_Compress<FIMPL,30>;
+template class Grid::Hadrons::MUtilities::TEpack_Compress<FIMPL,150>;
