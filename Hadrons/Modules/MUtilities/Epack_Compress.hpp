@@ -149,6 +149,8 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
     int sizeFine = par().fineSize;
     int sizeCoarse = par().coarseSize;
 
+    coarsePack.record = finePack.record;
+
     LOG(Message) << "Taking the first " << sizeFine << " fine vectors" << std::endl;
     for (int i=0; i<sizeFine; i++) {
         coarsePack.eval[i] = finePack.eval[i];
