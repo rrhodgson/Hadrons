@@ -29,20 +29,20 @@ using namespace Grid;
 using namespace Hadrons;
 using namespace MIO;
 
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>,GIMPL>;
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS>>;
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS, FIMPLF>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS>,GIMPLF>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS, FIMPLF>,GIMPL>;
 #endif
 
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,150>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,150>,GIMPL>;
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,150>>;
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,150, FIMPLF>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,150>,GIMPLF>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,150, FIMPLF>,GIMPL>;
 #endif
 
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,400>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,400>,GIMPL>;
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,400>>;
-template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,400, FIMPLF>>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,400>,GIMPLF>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,400, FIMPLF>,GIMPL>;
 #endif

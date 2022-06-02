@@ -44,13 +44,15 @@ public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(LoadCoarseEigenPackPar,
                                     std::string, filestem,
                                     bool,         multiFile,
+                                    bool,         redBlack,
                                     unsigned int, sizeFine,
                                     unsigned int, sizeCoarse,
                                     unsigned int, Ls,
-                                    std::vector<int>, blockSize);
+                                    std::vector<int>, blockSize,
+                                    std::string, gaugeXform);
 };
 
-template <typename Pack>
+template <typename Pack, typename GImpl>
 class TLoadCoarseEigenPack: public Module<LoadCoarseEigenPackPar>
 {
 public:
@@ -62,6 +64,9 @@ public:
     template <typename vtype> 
     using iImplScalar = iScalar<iScalar<iScalar<vtype>>>;
     typedef iImplScalar<typename Pack::Field::vector_type> SiteComplex;
+public:
+    GAUGE_TYPE_ALIASES(GImpl, );
+    typedef typename GImpl::GaugeLinkField GaugeMat;
 public:
     // constructor
     TLoadCoarseEigenPack(const std::string name);
@@ -77,52 +82,57 @@ public:
 };
 
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS>,GIMPL>), MIO);
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPackF, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, HADRONS_DEFAULT_LANCZOS_NBASIS>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, HADRONS_DEFAULT_LANCZOS_NBASIS>,GIMPLF>), MIO);
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPackIo32, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS, FIMPLF>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS, FIMPLF>,GIMPL>), MIO);
 #endif
 
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack150, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 150>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 150>,GIMPL>), MIO);
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack150F, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, 150>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, 150>,GIMPLF>), MIO);
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack150Io32, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 150, FIMPLF>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 150, FIMPLF>,GIMPL>), MIO);
 #endif
 
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack400, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 400>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 400>,GIMPL>), MIO);
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack400F, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, 400>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, 400>,GIMPLF>), MIO);
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack400Io32, 
-                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 400, FIMPLF>>), MIO);
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 400, FIMPLF>,GIMPL>), MIO);
 #endif
 
 /******************************************************************************
  *                 TLoadCoarseEigenPack implementation                             *
  ******************************************************************************/
 // constructor /////////////////////////////////////////////////////////////////
-template <typename Pack>
-TLoadCoarseEigenPack<Pack>::TLoadCoarseEigenPack(const std::string name)
+template <typename Pack, typename GImpl>
+TLoadCoarseEigenPack<Pack,GImpl>::TLoadCoarseEigenPack(const std::string name)
 : Module<LoadCoarseEigenPackPar>(name)
 {}
 
 // dependencies/products ///////////////////////////////////////////////////////
-template <typename Pack>
-std::vector<std::string> TLoadCoarseEigenPack<Pack>::getInput(void)
+template <typename Pack, typename GImpl>
+std::vector<std::string> TLoadCoarseEigenPack<Pack,GImpl>::getInput(void)
 {
     std::vector<std::string> in;
+
+    if (!par().gaugeXform.empty())
+    {
+        in = {par().gaugeXform};
+    }
     
     return in;
 }
 
-template <typename Pack>
-std::vector<std::string> TLoadCoarseEigenPack<Pack>::getOutput(void)
+template <typename Pack, typename GImpl>
+std::vector<std::string> TLoadCoarseEigenPack<Pack,GImpl>::getOutput(void)
 {
     std::vector<std::string> out = {getName()};
     
@@ -130,10 +140,10 @@ std::vector<std::string> TLoadCoarseEigenPack<Pack>::getOutput(void)
 }
 
 // setup ///////////////////////////////////////////////////////////////////////
-template <typename Pack>
-void TLoadCoarseEigenPack<Pack>::setup(void)
+template <typename Pack, typename GImpl>
+void TLoadCoarseEigenPack<Pack,GImpl>::setup(void)
 {
-    GridBase     *gridIo = nullptr, *gridCoarseIo = nullptr;
+    GridBase   *grid, *gridRb, *gridIo = nullptr, *gridCoarseIo = nullptr;
 
     if (typeHash<Field>() != typeHash<FieldIo>())
     {
@@ -147,17 +157,39 @@ void TLoadCoarseEigenPack<Pack>::setup(void)
                      par().sizeCoarse, envGetRbGrid(Field, par().Ls), 
                      envGetCoarseGrid(CoarseField, par().blockSize, par().Ls),
                      gridIo, gridCoarseIo);
+
+    grid   = envGetGrid(Field, par().Ls);
+    gridRb = envGetRbGrid(Field, par().Ls);
+    if (!par().gaugeXform.empty())
+    {
+        envTmp(GaugeMat,    "tmpXform", par().Ls, grid);
+        if (par().redBlack)
+        {
+            envTmp(GaugeMat, "tmpXformOdd", par().Ls, gridRb);
+        }
+    }
 }
 
 // execution ///////////////////////////////////////////////////////////////////
-template <typename Pack>
-void TLoadCoarseEigenPack<Pack>::execute(void)
+template <typename Pack, typename GImpl>
+void TLoadCoarseEigenPack<Pack,GImpl>::execute(void)
 {
     auto                 cg     = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
     auto                 &epack = envGetDerived(BasePack, Pack, getName());
     Lattice<SiteComplex> dummy(cg);
 
     epack.read(par().filestem, par().multiFile, vm().getTrajectory());
+
+    if (!par().gaugeXform.empty())
+    {
+        LOG(Message) << "Applying gauge transformation to fine eigenvectors " << getName()
+                     << " using " << par().gaugeXform << std::endl;
+
+        auto &xform = envGet(GaugeMat, par().gaugeXform);
+
+        epack.gaugeTransform(xform);
+    }
+
     LOG(Message) << "Block Gramm-Schmidt pass 1"<< std::endl;
     blockOrthogonalise(dummy, epack.evec);
     LOG(Message) << "Block Gramm-Schmidt pass 2"<< std::endl;
