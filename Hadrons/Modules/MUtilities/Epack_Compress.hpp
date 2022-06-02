@@ -158,10 +158,16 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
         coarsePack.evec[i] = finePack.evec[i];
     }
 
-
+    if (!par().output.empty())
+    {
+        std::cout << "Write " << sizeFine << " fine vectors" << std::endl;
+        coarsePack.writeFine(par().output, par().multiFile, vm().getTrajectory());
+    }
 
     Lattice<typename FImpl::SiteComplex> InnerProd(( envGetCoarseGrid(CoarseField, strToVec<int>(par().blockSize), env().getObjectLs(par().action)) )); 
-    std::cout << GridLogMessage <<" Block Gramm-Schmidt pass 1"<<std::endl;
+    LOG(Message) <<" Block Gramm-Schmidt pass 1"<<std::endl;
+    blockOrthonormalize(InnerProd,coarsePack.evec);
+    LOG(Message) <<" Block Gramm-Schmidt pass 2"<<std::endl;
     blockOrthonormalize(InnerProd,coarsePack.evec);
 
     LOG(Message) << "Projecting to coarse basis" << std::endl;
@@ -173,8 +179,6 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
 
     if (!par().output.empty())
     {
-        std::cout << "Write " << sizeFine << " fine vectors" << std::endl;
-        coarsePack.writeFine(par().output, par().multiFile, vm().getTrajectory());
         std::cout << "Write " << sizeCoarse << " coarse vectors" << std::endl;
         coarsePack.writeCoarse(par().output, par().multiFile, vm().getTrajectory());
     }
