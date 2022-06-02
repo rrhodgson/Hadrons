@@ -4,6 +4,7 @@
  * Copyright (C) 2015 - 2020
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
+ * Author: Raoul Hodgson <raoul.hodgson@ed.ac.uk>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,14 +43,14 @@ class Epack_CompressPar: Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(Epack_CompressPar,
-                                    std::string,   action,
-                                    std::string,   blockSize,
-                                    int,           fineSize,
-                                    int,           coarseSize,
-                                    std::string,   output,
-                                    bool,          multiFile,
-                                    std::string,   epack,
-                                    int,           size);
+                                    std::vector<int>, blockSize,
+                                    unsigned int,     fineSize,
+                                    unsigned int,     coarseSize,
+                                    unsigned int,     Ls,
+                                    std::string,      output,
+                                    bool,             multiFile,
+                                    std::string,      epack,
+                                    unsigned int,     size);
 };
 
 template <typename FImpl, int nBasis, typename FImplIo = FImpl>
@@ -107,7 +108,7 @@ TEpack_Compress<FImpl, nBasis, FImplIo>::TEpack_Compress(const std::string name)
 template <typename FImpl, int nBasis, typename FImplIo>
 std::vector<std::string> TEpack_Compress<FImpl, nBasis, FImplIo>::getInput(void)
 {
-    std::vector<std::string> in = {par().action, par().epack};
+    std::vector<std::string> in = {par().epack};
     
     return in;
 }
@@ -124,19 +125,24 @@ std::vector<std::string> TEpack_Compress<FImpl, nBasis, FImplIo>::getOutput(void
 template <typename FImpl, int nBasis, typename FImplIo>
 void TEpack_Compress<FImpl, nBasis, FImplIo>::setup(void)
 {
-    LOG(Message) << "Setting up local coherence Lanczos eigensolver for"
-                 << " action '" << par().action << "' (" << nBasis
-                 << " eigenvectors)..." << std::endl;
+    LOG(Message) << "Setting up local coherence eigenvector compressor (" << nBasis << " eigenvectors)" << std::endl;
     
-    unsigned int Ls        = env().getObjectLs(par().action);
-    auto         blockSize = strToVec<int>(par().blockSize);
-    GridBase     *gridIo = nullptr, *gridCoarseIo = nullptr;
+    GridBase     *gridIo = nullptr, *gridCoarse, *gridCoarseIo = nullptr;
 
-    auto cg  = envGetCoarseGrid(CoarseField, blockSize, Ls);
+    if (typeHash<Field>() != typeHash<FieldIo>())
+    {
+        gridIo = envGetRbGrid(FieldIo, par().Ls);
+    }
+    if (typeHash<CoarseField>() != typeHash<CoarseFieldIo>())
+    {
+        gridCoarseIo = envGetCoarseGrid(CoarseFieldIo, par().blockSize, par().Ls);
+    }
 
-    LOG(Message) << "Coarse grid: " << cg->GlobalDimensions() << std::endl;
-    envCreate(CoarsePack, getName(), Ls,
-                     par().fineSize, par().coarseSize, envGetRbGrid(Field, Ls), cg,
+    gridCoarse  = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
+
+    LOG(Message) << "Coarse grid: " << gridCoarse->GlobalDimensions() << std::endl;
+    envCreate(CoarsePack, getName(), par().Ls,
+                     par().fineSize, par().coarseSize, envGetRbGrid(Field, par().Ls), gridCoarse,
                      gridIo, gridCoarseIo);
 }
 
@@ -147,13 +153,14 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
     auto &coarsePack   = envGet(CoarsePack, getName());
     auto &finePack     = envGet(BasePack, par().epack);
 
-    int sizeFine = par().fineSize;
-    int sizeCoarse = par().coarseSize;
+    unsigned int sizeFine = par().fineSize;
+    unsigned int sizeCoarse = par().coarseSize;
 
     coarsePack.record = finePack.record;
 
     LOG(Message) << "Taking the first " << sizeFine << " fine vectors" << std::endl;
-    for (int i=0; i<sizeFine; i++) {
+    for (unsigned int i=0; i<sizeFine; i++)
+    {
         coarsePack.eval[i] = finePack.eval[i];
         coarsePack.evec[i] = finePack.evec[i];
     }
@@ -164,14 +171,17 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
         coarsePack.writeFine(par().output, par().multiFile, vm().getTrajectory());
     }
 
-    Lattice<typename FImpl::SiteComplex> InnerProd(( envGetCoarseGrid(CoarseField, strToVec<int>(par().blockSize), env().getObjectLs(par().action)) )); 
+    GridBase *gridCoarse = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
+
+    Lattice<typename FImpl::SiteComplex> dummy(gridCoarse);
     LOG(Message) <<" Block Gramm-Schmidt pass 1"<<std::endl;
-    blockOrthonormalize(InnerProd,coarsePack.evec);
+    blockOrthonormalize(dummy,coarsePack.evec);
     LOG(Message) <<" Block Gramm-Schmidt pass 2"<<std::endl;
-    blockOrthonormalize(InnerProd,coarsePack.evec);
+    blockOrthonormalize(dummy,coarsePack.evec);
 
     LOG(Message) << "Projecting to coarse basis" << std::endl;
-    for (int i=0; i<finePack.evec.size(); i++) {
+    for (unsigned int i=0; i<finePack.evec.size(); i++)
+    {
         LOG(Message) << "evec " << i << std::endl;
         blockProject(coarsePack.evecCoarse[i], finePack.evec[i], coarsePack.evec);
         coarsePack.evalCoarse[i] = finePack.eval[i];
