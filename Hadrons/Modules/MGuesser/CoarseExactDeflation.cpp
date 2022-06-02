@@ -12,3 +12,7 @@ template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigen
 
 template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,150>>;
 template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,150>>;
+
+template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,400>>;
+template class Grid::Hadrons::MGuesser::TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,400>>;
+

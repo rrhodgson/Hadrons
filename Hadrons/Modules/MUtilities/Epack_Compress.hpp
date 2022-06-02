@@ -86,11 +86,12 @@ public:
 MODULE_REGISTER_TMP(Epack_Compress, ARG(TEpack_Compress<FIMPL, HADRONS_DEFAULT_LANCZOS_NBASIS>), MUtilities);
 MODULE_REGISTER_TMP(Epack_Compress30, ARG(TEpack_Compress<FIMPL, 30>), MUtilities);
 MODULE_REGISTER_TMP(Epack_Compress150, ARG(TEpack_Compress<FIMPL, 150>), MUtilities);
-
+MODULE_REGISTER_TMP(Epack_Compress400, ARG(TEpack_Compress<FIMPL, 400>), MUtilities);
 
 MODULE_REGISTER_TMP(Epack_CompressF, ARG(TEpack_Compress<FIMPLF, HADRONS_DEFAULT_LANCZOS_NBASIS>), MUtilities);
 MODULE_REGISTER_TMP(Epack_CompressF30, ARG(TEpack_Compress<FIMPLF, 30>), MUtilities);
 MODULE_REGISTER_TMP(Epack_CompressF150, ARG(TEpack_Compress<FIMPLF, 150>), MUtilities);
+MODULE_REGISTER_TMP(Epack_CompressF400, ARG(TEpack_Compress<FIMPLF, 400>), MUtilities);
 
 
 /******************************************************************************
