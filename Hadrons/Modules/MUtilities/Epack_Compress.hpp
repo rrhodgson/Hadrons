@@ -43,7 +43,7 @@ class Epack_CompressPar: Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(Epack_CompressPar,
-                                    std::vector<int>, blockSize,
+                                    std::string,      blockSize,
                                     unsigned int,     fineSize,
                                     unsigned int,     coarseSize,
                                     unsigned int,     Ls,
@@ -129,16 +129,18 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::setup(void)
     
     GridBase     *gridIo = nullptr, *gridCoarse, *gridCoarseIo = nullptr;
 
+    auto blockSize = strToVec<int>(par().blockSize);
+
     if (typeHash<Field>() != typeHash<FieldIo>())
     {
         gridIo = envGetRbGrid(FieldIo, par().Ls);
     }
     if (typeHash<CoarseField>() != typeHash<CoarseFieldIo>())
     {
-        gridCoarseIo = envGetCoarseGrid(CoarseFieldIo, par().blockSize, par().Ls);
+        gridCoarseIo = envGetCoarseGrid(CoarseFieldIo, blockSize, par().Ls);
     }
 
-    gridCoarse  = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
+    gridCoarse  = envGetCoarseGrid(CoarseField, blockSize, par().Ls);
 
     LOG(Message) << "Coarse grid: " << gridCoarse->GlobalDimensions() << std::endl;
     envCreate(CoarsePack, getName(), par().Ls,
@@ -171,7 +173,8 @@ void TEpack_Compress<FImpl, nBasis, FImplIo>::execute(void)
         coarsePack.writeFine(par().output, par().multiFile, vm().getTrajectory());
     }
 
-    GridBase *gridCoarse = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
+    auto blockSize = strToVec<int>(par().blockSize);
+    GridBase *gridCoarse = envGetCoarseGrid(CoarseField, blockSize, par().Ls);
 
     Lattice<typename FImpl::SiteComplex> dummy(gridCoarse);
     LOG(Message) <<" Block Gramm-Schmidt pass 1"<<std::endl;
