@@ -58,16 +58,12 @@ class TEpack_Compress: public Module<Epack_CompressPar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
-    typedef LocalCoherenceLanczos<typename FImpl::SiteSpinor, 
-                                  typename FImpl::SiteComplex, 
-                                  nBasis>                  LCL;
     typedef BaseFermionEigenPack<FImpl>                    BasePack;
     typedef CoarseFermionEigenPack<FImpl, nBasis, FImplIo> CoarsePack;
     typedef typename CoarsePack::Field                     Field;
     typedef typename CoarsePack::FieldIo                   FieldIo;
     typedef typename CoarsePack::CoarseField               CoarseField;
     typedef typename CoarsePack::CoarseFieldIo             CoarseFieldIo;
-    typedef HADRONS_DEFAULT_SCHUR_OP<FMat, FermionField>   SchurFMat;
 
     typedef FermionEigenPack<FImpl>                        FinePack;
 public:
