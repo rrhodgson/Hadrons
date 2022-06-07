@@ -103,6 +103,7 @@ public:
   } 
 
   virtual void operator()(const Field &src,Field &guess) {
+    std::cout << "Exact deflating (src cast)" << std::endl;
     FieldF src_f(evec[0].Grid());
     precisionChange(src_f,src);
     FieldF guess_f(src_f.Grid());
