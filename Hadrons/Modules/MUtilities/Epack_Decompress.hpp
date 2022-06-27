@@ -121,7 +121,7 @@ void TEpack_Decompress<FImpl, nBasis, FImplIo>::setup(void)
 {
     LOG(Message) << "Setting up local coherence eigenvector compressor (" << nBasis << " eigenvectors)" << std::endl;
     
-    GridBase     *gridIo = nullptr, *gridCoarse, *gridCoarseIo = nullptr;
+    GridBase    *grid = nullptr, *gridIo = nullptr, *gridCoarse, *gridCoarseIo = nullptr;
 
     auto blockSize = strToVec<int>(par().blockSize);
 
@@ -140,7 +140,10 @@ void TEpack_Decompress<FImpl, nBasis, FImplIo>::setup(void)
     // envCreate(CoarsePack, getName(), par().Ls,
     //                  par().fineSize, par().coarseSize, envGetRbGrid(Field, par().Ls), gridCoarse,
     //                  gridIo, gridCoarseIo);
-    envCreateDerived(BasePack, FinePack, getName(), par().Ls, par().size, envGetRbGrid(Field, par().Ls), gridIo);
+
+    grid = getGrid<Field>(true, par().Ls);
+
+    envCreateDerived(BasePack, FinePack, getName(), par().Ls, par().size, grid, gridIo);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
