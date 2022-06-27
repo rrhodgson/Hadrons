@@ -184,6 +184,8 @@ void TEpack_Decompress<FImpl, nBasis, FImplIo>::execute(void)
     for (unsigned int i=0; i<finePack.evec.size(); i++)
     {
         LOG(Message) << "evec " << i << std::endl;
+        LOG(Message) << finePack.evec[i].Grid() << std::endl;
+        LOG(Message) << coarsePack.evec[0].Grid() << std::endl;
         blockPromote(coarsePack.evecCoarse[i], finePack.evec[i], coarsePack.evec);
         finePack.eval[i] = coarsePack.evalCoarse[i];
     }
