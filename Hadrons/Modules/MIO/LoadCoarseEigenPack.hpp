@@ -48,7 +48,7 @@ public:
                                     unsigned int, sizeFine,
                                     unsigned int, sizeCoarse,
                                     unsigned int, Ls,
-                                    std::vector<int>, blockSize,
+                                    std::string, blockSize,
                                     std::string, gaugeXform);
 };
 
@@ -145,17 +145,19 @@ void TLoadCoarseEigenPack<Pack,GImpl>::setup(void)
 {
     GridBase   *grid, *gridRb, *gridIo = nullptr, *gridCoarseIo = nullptr;
 
+    auto blockSize = strToVec<int>(par().blockSize);
+
     if (typeHash<Field>() != typeHash<FieldIo>())
     {
         gridIo = envGetRbGrid(FieldIo, par().Ls);
     }
     if (typeHash<CoarseField>() != typeHash<CoarseFieldIo>())
     {
-        gridCoarseIo = envGetCoarseGrid(CoarseFieldIo, par().blockSize, par().Ls);
+        gridCoarseIo = envGetCoarseGrid(CoarseFieldIo, blockSize, par().Ls);
     }
     envCreateDerived(BasePack, Pack, getName(), par().Ls, par().sizeFine,
                      par().sizeCoarse, envGetRbGrid(Field, par().Ls), 
-                     envGetCoarseGrid(CoarseField, par().blockSize, par().Ls),
+                     envGetCoarseGrid(CoarseField, blockSize, par().Ls),
                      gridIo, gridCoarseIo);
 
     grid   = envGetGrid(Field, par().Ls);
@@ -174,7 +176,8 @@ void TLoadCoarseEigenPack<Pack,GImpl>::setup(void)
 template <typename Pack, typename GImpl>
 void TLoadCoarseEigenPack<Pack,GImpl>::execute(void)
 {
-    auto                 cg     = envGetCoarseGrid(CoarseField, par().blockSize, par().Ls);
+    auto blockSize = strToVec<int>(par().blockSize);
+    auto                 cg     = envGetCoarseGrid(CoarseField, blockSize, par().Ls);
     auto                 &epack = envGetDerived(BasePack, Pack, getName());
     Lattice<SiteComplex> dummy(cg);
 
