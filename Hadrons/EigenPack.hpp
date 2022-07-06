@@ -271,7 +271,9 @@ public:
     void resize(const size_t size, GridBase *grid)
     {
         eval.resize(size);
-        evec.resize(size, grid);
+	evec.reserve(size);
+	for (unsigned int i=0; i<size; i++)
+		evec.emplace_back(grid,CpuRead);
     }
 };
 
@@ -401,7 +403,9 @@ public:
     {
         EigenPack<FineF, FineFIo>::resize(sizeFine, gridFine);
         evalCoarse.resize(sizeCoarse);
-        evecCoarse.resize(sizeCoarse, gridCoarse);
+	evecCoarse.reserve(sizeCoarse);
+	for (unsigned int i=0; i<sizeCoarse; i++)
+		evecCoarse.emplace_back(gridCoarse,CpuRead);
     }
 
     void readFine(const std::string fileStem, const bool multiFile, const int traj = -1)
