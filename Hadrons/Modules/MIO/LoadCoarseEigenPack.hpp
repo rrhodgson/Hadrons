@@ -99,6 +99,15 @@ MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack150Io32,
                     ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 150, FIMPLF>,GIMPL>), MIO);
 #endif
 
+MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack250, 
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 250>,GIMPL>), MIO);
+#ifdef GRID_DEFAULT_PRECISION_DOUBLE
+MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack250F, 
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF, 250>,GIMPLF>), MIO);
+MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack250Io32, 
+                    ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 250, FIMPLF>,GIMPL>), MIO);
+#endif
+
 MODULE_REGISTER_TMP(LoadCoarseFermionEigenPack400, 
                     ARG(TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL, 400>,GIMPL>), MIO);
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE

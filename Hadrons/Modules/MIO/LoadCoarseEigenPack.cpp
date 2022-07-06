@@ -41,6 +41,14 @@ template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<F
 template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,150, FIMPLF>,GIMPL>;
 #endif
 
+
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,250>,GIMPL>;
+#ifdef GRID_DEFAULT_PRECISION_DOUBLE
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,250>,GIMPLF>;
+template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,250, FIMPLF>,GIMPL>;
+#endif
+
+
 template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPL,400>,GIMPL>;
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 template class Grid::Hadrons::MIO::TLoadCoarseEigenPack<CoarseFermionEigenPack<FIMPLF,400>,GIMPLF>;

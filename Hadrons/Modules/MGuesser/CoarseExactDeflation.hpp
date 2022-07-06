@@ -51,6 +51,9 @@ MODULE_REGISTER_TMP(CoarseExactDeflationF30, ARG(TCoarseExactDeflation<CoarseFer
 MODULE_REGISTER_TMP(CoarseExactDeflation150, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,150>>), MGuesser);
 MODULE_REGISTER_TMP(CoarseExactDeflationF150, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,150>>), MGuesser);
 
+MODULE_REGISTER_TMP(CoarseExactDeflation250, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,250>>), MGuesser);
+MODULE_REGISTER_TMP(CoarseExactDeflationF250, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,250>>), MGuesser);
+
 MODULE_REGISTER_TMP(CoarseExactDeflation400, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPL,400>>), MGuesser);
 MODULE_REGISTER_TMP(CoarseExactDeflationF400, ARG(TCoarseExactDeflation<CoarseFermionEigenPack<FIMPLF,400>>), MGuesser);
 

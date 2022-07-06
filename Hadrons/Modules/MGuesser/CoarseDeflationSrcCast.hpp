@@ -46,11 +46,13 @@ public:
 typedef CoarseFermionEigenPack<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS> CEPack;
 typedef CoarseFermionEigenPack<FIMPLF,30> CEPack30;
 typedef CoarseFermionEigenPack<FIMPLF,150> CEPack150;
+typedef CoarseFermionEigenPack<FIMPLF,250> CEPack250;
 typedef CoarseFermionEigenPack<FIMPLF,400> CEPack400;
 
 MODULE_REGISTER_TMP(CoarseDeflationSrcCast, ARG(TCoarseDeflationSrcCast<FIMPL, CEPack>), MGuesser);
 MODULE_REGISTER_TMP(CoarseDeflationSrcCast30, ARG(TCoarseDeflationSrcCast<FIMPL, CEPack30>), MGuesser);
 MODULE_REGISTER_TMP(CoarseDeflationSrcCast150, ARG(TCoarseDeflationSrcCast<FIMPL, CEPack150>), MGuesser);
+MODULE_REGISTER_TMP(CoarseDeflationSrcCast250, ARG(TCoarseDeflationSrcCast<FIMPL, CEPack250>), MGuesser);
 MODULE_REGISTER_TMP(CoarseDeflationSrcCast400, ARG(TCoarseDeflationSrcCast<FIMPL, CEPack400>), MGuesser);
 
 /******************************************************************************
