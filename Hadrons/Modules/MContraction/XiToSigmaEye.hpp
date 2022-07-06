@@ -79,7 +79,6 @@ public:
                                     std::string, qdTf,
                                     std::string, qsTi,
                                     unsigned int,   tf,
-                                    std::string, sink,
                                     std::string, output);
 };
 
@@ -137,7 +136,7 @@ TXiToSigmaEye<FImpl>::TXiToSigmaEye(const std::string name)
 template <typename FImpl>
 std::vector<std::string> TXiToSigmaEye<FImpl>::getInput(void)
 {
-    std::vector<std::string> input = {par().qqLoop, par().qdSpec, par().qsSpec, par().qdTf, par().qsTi, par().sink};
+    std::vector<std::string> input = {par().qqLoop, par().qdSpec, par().qsSpec, par().qdTf, par().qsTi};
     
     return input;
 }
@@ -173,7 +172,6 @@ void TXiToSigmaEye<FImpl>::execute(void)
 
     LOG(Message) << "Computing xi-to-sigma contractions '" << getName() << "'" << std::endl;
     LOG(Message) << "' with (Gamma^A,Gamma^B)_xi = ( Identity, C*gamma_5 ) and (Gamma^A,Gamma^B)_sigma = ( Identity, C*gamma_5 )" << std::endl; 
-    LOG(Message) << " using sink " << par().sink << "." << std::endl;
         
     envGetTmp(SpinMatrixField, c);
     std::vector<SpinMatrix> buf;

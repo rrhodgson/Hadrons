@@ -79,7 +79,6 @@ public:
                                     std::string, qdTf,
                                     std::string, qsTi,
                                     unsigned int,   tf,
-                                    std::string, sink,
                                     std::string, output);
 };
 
@@ -137,7 +136,7 @@ TSigmaToNucleonEye<FImpl>::TSigmaToNucleonEye(const std::string name)
 template <typename FImpl>
 std::vector<std::string> TSigmaToNucleonEye<FImpl>::getInput(void)
 {
-    std::vector<std::string> input = {par().qqLoop, par().quSpec1, par().quSpec2, par().qdTf, par().qsTi, par().sink};
+    std::vector<std::string> input = {par().qqLoop, par().quSpec1, par().quSpec2, par().qdTf, par().qsTi};
     
     return input;
 }
@@ -173,7 +172,6 @@ void TSigmaToNucleonEye<FImpl>::execute(void)
 
     LOG(Message) << "Computing sigma-to-nucleon contractions '" << getName() << "'" << std::endl;
     LOG(Message) << "' with (Gamma^A,Gamma^B)_sigma = ( Identity, C*gamma_5 ) and (Gamma^A,Gamma^B)_nucl = ( Identity, C*gamma_5 )" << std::endl; 
-    LOG(Message) << " using sink " << par().sink << "." << std::endl;
         
     envGetTmp(SpinMatrixField, c);
     std::vector<SpinMatrix> buf;
