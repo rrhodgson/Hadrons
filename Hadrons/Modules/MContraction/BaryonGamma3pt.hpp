@@ -234,7 +234,8 @@ void TBaryonGamma3pt<FImpl>::setup(void)
 
     envTmpLat(SpinMatrixField, "c");
     envTmpLat(LatticeComplex, "coor");
-    envCacheLat(LatticeComplex, momphName_);
+    // envCacheLat(LatticeComplex, momphName_);
+    envTmpLat(LatticeComplex, "ph");
 }
 
 template <typename FImpl>
@@ -474,7 +475,8 @@ void TBaryonGamma3pt<FImpl>::execute(void)
                 }
             }
         
-            auto &ph = envGet(LatticeComplex, momphName_);
+            // auto &ph = envGet(LatticeComplex, momphName_);
+            envGetTmp(LatticeComplex, ph);
         
             if (mom_[0] != 0 || mom_[1] != 0 || mom_[2] != 0) 
             {
