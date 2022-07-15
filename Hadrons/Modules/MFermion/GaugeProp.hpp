@@ -131,12 +131,27 @@ void TGaugeProp<FImpl>::setup(void)
     {
         auto &src = envGet(std::vector<PropagatorField>, par().source);
 
-        envCreate(std::vector<PropagatorField>, getName(), 1, src.size(),
-                  envGetGrid(PropagatorField));
+        // envCreate(std::vector<PropagatorField>, getName(), 1, src.size(),
+        //           envGetGrid(PropagatorField));
+
+        std::vector<PropagatorField> tmp1;
+        envCreate(std::vector<PropagatorField>, getName(), 1, tmp1);
+        auto &v1 = envGet(std::vector<PropagatorField>, getName());
+        v1.reserve(src.size());
+        for (int i=0; i<src.size(); i++) 
+            v1.emplace_back(envGetGrid(PropagatorField), CpuRead);
+
         if (Ls_ > 1)
         {
-            envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_,
-                      src.size(), envGetGrid(PropagatorField, Ls_));
+            // envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_,
+            //           src.size(), envGetGrid(PropagatorField, Ls_));
+
+            std::vector<PropagatorField> tmp2;
+            envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_, tmp2);
+            auto &v2 = envGet(std::vector<PropagatorField>, getName() + "_5d");
+            v2.reserve(src.size());
+            for (int i=0; i<src.size(); i++) 
+                v2.emplace_back(envGetGrid(PropagatorField, Ls_), CpuRead);
         }
         sourceSize = src.size()*Ns*FImpl::Dimension;
     }
@@ -145,12 +160,27 @@ void TGaugeProp<FImpl>::setup(void)
     {
         auto &src = envGet(std::vector<PropagatorField *>, par().source);
 
-        envCreate(std::vector<PropagatorField>, getName(), 1, src.size(),
-                  envGetGrid(PropagatorField));
+        // envCreate(std::vector<PropagatorField>, getName(), 1, src.size(),
+        //           envGetGrid(PropagatorField));
+
+        std::vector<PropagatorField> tmp1;
+        envCreate(std::vector<PropagatorField>, getName(), 1, tmp1);
+        auto &v1 = envGet(std::vector<PropagatorField>, getName());
+        v1.reserve(src.size());
+        for (int i=0; i<src.size(); i++) 
+            v1.emplace_back(envGetGrid(PropagatorField), CpuRead);
+
         if (Ls_ > 1)
         {
-            envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_,
-                      src.size(), envGetGrid(PropagatorField, Ls_));
+            // envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_,
+            //           src.size(), envGetGrid(PropagatorField, Ls_));
+
+            std::vector<PropagatorField> tmp2;
+            envCreate(std::vector<PropagatorField>, getName() + "_5d", Ls_, tmp2);
+            auto &v2 = envGet(std::vector<PropagatorField>, getName() + "_5d");
+            v2.reserve(src.size());
+            for (int i=0; i<src.size(); i++) 
+                v2.emplace_back(envGetGrid(PropagatorField, Ls_), CpuRead);
         }
         sourceSize = src.size()*Ns*FImpl::Dimension;
     }
@@ -164,17 +194,47 @@ void TGaugeProp<FImpl>::setup(void)
     envTmpLat(FermionField, "tmp");
     if (Ls_ > 1)
     {
-        envTmp(std::vector<FermionField>, "source", Ls_, sourceSize,
-               envGetGrid(FermionField, Ls_));
-        envTmp(std::vector<FermionField>, "sol", Ls_, sourceSize,
-               envGetGrid(FermionField, Ls_));
+        // envTmp(std::vector<FermionField>, "source", Ls_, sourceSize,
+        //        envGetGrid(FermionField, Ls_));
+
+        std::vector<FermionField> tmp1;
+        envTmp(std::vector<FermionField>, "source", Ls_, tmp1);
+        envGetTmp(std::vector<FermionField>, source);
+        source.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++) 
+            source.emplace_back(envGetGrid(FermionField, Ls_), CpuRead);
+
+        // envTmp(std::vector<FermionField>, "sol", Ls_, sourceSize,
+        //        envGetGrid(FermionField, Ls_));
+
+        std::vector<FermionField> tmp2;
+        envTmp(std::vector<FermionField>, "sol", Ls_, tmp2);
+        envGetTmp(std::vector<FermionField>, sol);
+        sol.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++) 
+            sol.emplace_back(envGetGrid(FermionField, Ls_), CpuRead);
     }
     else
     {
-        envTmp(std::vector<FermionField>, "source", 1, sourceSize,
-               envGetGrid(FermionField));
-        envTmp(std::vector<FermionField>, "sol", 1, sourceSize,
-               envGetGrid(FermionField));
+        // envTmp(std::vector<FermionField>, "source", 1, sourceSize,
+        //        envGetGrid(FermionField, 1));
+
+        std::vector<FermionField> tmp1;
+        envTmp(std::vector<FermionField>, "source", 1, tmp1);
+        envGetTmp(std::vector<FermionField>, source);
+        source.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++) 
+            source.emplace_back(envGetGrid(FermionField, 1), CpuRead);
+
+        // envTmp(std::vector<FermionField>, "sol", 1, sourceSize,
+        //        envGetGrid(FermionField, 1));
+
+        std::vector<FermionField> tmp2;
+        envTmp(std::vector<FermionField>, "sol", 1, tmp2);
+        envGetTmp(std::vector<FermionField>, sol);
+        sol.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++) 
+            sol.emplace_back(envGetGrid(FermionField, 1), CpuRead);
     }
 }
 
