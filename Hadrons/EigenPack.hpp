@@ -271,7 +271,10 @@ public:
     void resize(const size_t size, GridBase *grid)
     {
         eval.resize(size);
-        evec.resize(size, grid);
+        //evec.resize(size, grid);
+	evec.reserve(size);
+	for (int i=0; i<size; i++)
+		evec.emplace_back(grid,CpuRead);
     }
 };
 
