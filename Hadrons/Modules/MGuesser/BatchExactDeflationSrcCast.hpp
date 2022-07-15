@@ -87,8 +87,17 @@ public:
         double cast_t = 0.;
         double proj_t = 0.;
 
-        std::vector<EPackField> inCast( sourceSize , EPackField(evec_[0].Grid()) );
-        std::vector<EPackField> outCast( sourceSize , EPackField(evec_[0].Grid()) );
+        // std::vector<EPackField> inCast( sourceSize , EPackField(evec_[0].Grid()) );
+        std::vector<EPackField> inCast;
+        inCast.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++)
+            inCast.emplace_back( evec_[0].Grid() , CpuRead);
+
+        // std::vector<EPackField> outCast( sourceSize , EPackField(evec_[0].Grid()) );
+        std::vector<EPackField> outCast;
+        outCast.reserve(sourceSize);
+        for (int i=0; i<sourceSize; i++)
+            outCast.emplace_back( evec_[0].Grid() , CpuRead);
 
         cast_t -= usecond();
         for (unsigned int i = 0; i < sourceSize; ++i) {
