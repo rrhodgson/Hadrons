@@ -82,7 +82,17 @@ DependencyMap TVectorPackRef<Field>::getObjectDependencies(void)
 template <typename Field>
 void TVectorPackRef<Field>::setup(void)
 {
-    envCreate(std::vector<Field *>, getName(), 1, par().fields.size(), nullptr);
+    int Ls = 1;
+    for (int i=0; i<par().fields.size(); i++) {
+        int Ls_tmp = env().getObjectLs(par().fields[i]);
+        if (i==0 || Ls == Ls_tmp) {
+            Ls = Ls_tmp;
+        } else {
+            LOG(Message) << "i = " << i << "  :  " << Ls << " != " << Ls_tmp << std::endl;
+            assert(0);
+        }
+    }
+    envCreate(std::vector<Field *>, getName(), Ls, par().fields.size(), nullptr);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
