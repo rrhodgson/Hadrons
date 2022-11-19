@@ -148,7 +148,6 @@ template <typename FImpl, int nBasis, typename FImplIo>
 void TEigenPackLCDecompress<FImpl, nBasis, FImplIo>::execute(void)
 {
     auto &coarsePack = envGet(CoarsePack, par().coarseEpack);
-    // auto &finePack     = envGet(BasePack, getName());
     auto &finePack   = envGetDerived(BasePack, FinePack, getName());
 
     finePack.record = coarsePack.record;
