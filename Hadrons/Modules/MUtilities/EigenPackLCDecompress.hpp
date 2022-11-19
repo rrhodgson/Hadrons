@@ -46,7 +46,9 @@ public:
                                     std::string,      coarseEpack,
                                     std::string,      blockSize,
                                     unsigned int,     coarseSize,
-                                    unsigned int,     Ls);
+                                    unsigned int,     Ls,
+                                    std::string,      output,
+                                    bool,             multiFile);
 };
 
 template <typename FImpl, int nBasis, typename FImplIo = FImpl>
@@ -83,7 +85,7 @@ MODULE_REGISTER_TMP(EigenPackLCDecompress400 , ARG(TEigenPackLCDecompress<FIMPL 
 
 MODULE_REGISTER_TMP(EigenPackLCDecompressF   , ARG(TEigenPackLCDecompress<FIMPLF, HADRONS_DEFAULT_LANCZOS_NBASIS>), MUtilities);
 MODULE_REGISTER_TMP(EigenPackLCDecompress150F, ARG(TEigenPackLCDecompress<FIMPLF, 150>), MUtilities);
-MODULE_REGISTER_TMP(EigenPackLCDecompress150F, ARG(TEigenPackLCDecompress<FIMPLF, 250>), MUtilities);
+MODULE_REGISTER_TMP(EigenPackLCDecompress250F, ARG(TEigenPackLCDecompress<FIMPLF, 250>), MUtilities);
 MODULE_REGISTER_TMP(EigenPackLCDecompress400F, ARG(TEigenPackLCDecompress<FIMPLF, 400>), MUtilities);
 
 
@@ -145,8 +147,9 @@ void TEigenPackLCDecompress<FImpl, nBasis, FImplIo>::setup(void)
 template <typename FImpl, int nBasis, typename FImplIo>
 void TEigenPackLCDecompress<FImpl, nBasis, FImplIo>::execute(void)
 {
-    auto &coarsePack   = envGet(CoarsePack, par().coarseEpack);
-    auto &finePack     = envGet(BasePack, getName());
+    auto &coarsePack = envGet(CoarsePack, par().coarseEpack);
+    // auto &finePack     = envGet(BasePack, getName());
+    auto &finePack   = envGetDerived(BasePack, FinePack, getName());
 
     finePack.record = coarsePack.record;
 
