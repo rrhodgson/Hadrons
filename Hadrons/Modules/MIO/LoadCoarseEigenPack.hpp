@@ -49,6 +49,7 @@ public:
                                     unsigned int, sizeCoarse,
                                     unsigned int, Ls,
                                     std::string, blockSize,
+				    bool,        orthogonalise,
                                     std::string, gaugeXform);
 };
 
@@ -176,10 +177,12 @@ void TLoadCoarseEigenPack<Pack,GImpl>::execute(void)
         epack.gaugeTransform(xform);
     }
 
-    LOG(Message) << "Block Gramm-Schmidt pass 1"<< std::endl;
-    blockOrthogonalise(dummy, epack.evec);
-    LOG(Message) << "Block Gramm-Schmidt pass 2"<< std::endl;
-    blockOrthogonalise(dummy, epack.evec);
+    if (par().orthogonalise) {
+    	LOG(Message) << "Block Gramm-Schmidt pass 1"<< std::endl;
+   	blockOrthogonalise(dummy, epack.evec);
+    	LOG(Message) << "Block Gramm-Schmidt pass 2"<< std::endl;
+    	blockOrthogonalise(dummy, epack.evec);
+    }
 }
 
 END_MODULE_NAMESPACE
