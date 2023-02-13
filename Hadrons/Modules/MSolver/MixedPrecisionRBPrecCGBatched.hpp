@@ -50,7 +50,8 @@ public:
                                     unsigned int, maxPatchupIteration,
                                     double      , residual,
                                     std::string , innerGuesser,
-                                    std::string , outerGuesser);
+                                    std::string , outerGuesser,
+                                    bool        , updateResidual);
 };
 
 template <typename FImplInner, typename FImplOuter>
@@ -175,7 +176,7 @@ MixedPrecisionConjugateGradientBatched<FermionFieldOuter, FermionFieldInner>    
          par().maxOuterIteration,                                                                     \
          par().maxPatchupIteration,                                                                   \
          getGrid<FermionFieldInner>(true, Ls),                                                        \
-         simat, somat);                                                                               \
+         simat, somat, par().updateResidual);                                                         \
 mpcg.useGuesser(iguesser);                                                                            \
 OperatorFunctionWrapper<FermionFieldOuter> wmpcg(mpcg);                                               \
 HADRONS_DEFAULT_SCHUR_SOLVE<FermionFieldOuter> schurSolver(wmpcg);                                    \

@@ -31,11 +31,13 @@ using namespace Hadrons;
 using namespace MUtilities;
 
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPL,HADRONS_DEFAULT_LANCZOS_NBASIS>;
+template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPL,30>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPL,150>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPL,250>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPL,400>;
 
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPLF,HADRONS_DEFAULT_LANCZOS_NBASIS>;
+template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPLF,30>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPLF,150>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPLF,250>;
 template class Grid::Hadrons::MUtilities::TEigenPackLCDecompress<FIMPLF,400>;
