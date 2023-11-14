@@ -1,9 +1,11 @@
 /*
  * Application.hpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
- * Copyright (C) 2015 - 2020
+ * Copyright (C) 2015 - 2023
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
+ * Author: Fabian Joswig <fabian.joswig@ed.ac.uk>
+ * Author: Raoul Hodgson <raoul.hodgson@ed.ac.uk>
  * Author: fionnoh <fionnoh@gmail.com>
  *
  * Hadrons is free software: you can redistribute it and/or modify
@@ -110,6 +112,8 @@ public:
     template <typename M>
     void createModule(const std::string name, const typename M::Par &par);
     void createModule(const std::string name, const std::string type, XmlReader &reader);
+    // test if module exists
+    bool hasModule(const std::string name) const;
     // module DB entry for result files
     template <typename EntryType>
     void setResultMetadata(const std::string moduleName, const std::string tableName, const EntryType &entry);

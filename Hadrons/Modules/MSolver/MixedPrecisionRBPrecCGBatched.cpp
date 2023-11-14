@@ -1,8 +1,9 @@
 /*
  * MixedPrecisionRBPrecCGBatched.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
- * Copyright (C) 2015 - 2020
+ * Copyright (C) 2015 - 2023
  *
+ * Author: Antonin Portelli <antonin.portelli@me.com>
  * Author: Raoul Hodgson <raoul.hodgson@ed.ac.uk>
  *
  * Hadrons is free software: you can redistribute it and/or modify
@@ -29,5 +30,5 @@ using namespace Grid;
 using namespace Hadrons;
 using namespace MSolver;
 
-template class Grid::Hadrons::MSolver::TMixedPrecisionRBPrecCGBatched<FIMPLF, FIMPLD>;
-template class Grid::Hadrons::MSolver::TMixedPrecisionRBPrecCGBatched<ZFIMPLF, ZFIMPLD>;
+template class HADRONS_NAMESPACE::MSolver::TMixedPrecisionRBPrecCGBatched<FIMPLF, FIMPLD>;
+template class HADRONS_NAMESPACE::MSolver::TMixedPrecisionRBPrecCGBatched<ZFIMPLF, ZFIMPLD>;

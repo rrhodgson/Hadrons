@@ -1,7 +1,7 @@
 /*
  * EigenPackLCDecompress.hpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
- * Copyright (C) 2015 - 2020
+ * Copyright (C) 2015 - 2023
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
  * Author: Raoul Hodgson <raoul.hodgson@ed.ac.uk>
@@ -117,7 +117,8 @@ std::vector<std::string> TEigenPackLCDecompress<FImpl, nBasis, FImplIo>::getOutp
 template <typename FImpl, int nBasis, typename FImplIo>
 void TEigenPackLCDecompress<FImpl, nBasis, FImplIo>::setup(void)
 {    
-    GridBase *gridIo = nullptr, *gridCoarseIo = nullptr;
+    GridBase *gridIo = nullptr;
+    [[maybe_unused]] GridBase *gridCoarseIo = nullptr;
 
     auto blockSize = strToVec<int>(par().blockSize);
 
