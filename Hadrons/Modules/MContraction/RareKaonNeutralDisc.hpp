@@ -92,6 +92,7 @@ public:
                                     std::string, q2,
                                     std::string, q3,
                                     std::string, q4,
+				    int        , tf,
                                     std::string, output);
 };
 
@@ -185,7 +186,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
     Result                r;
     auto                  &q1 = envGet(PropagatorField, par().q1);
     auto                  &q2 = envGet(PropagatorField, par().q2);
-    auto                  &q3 = envGet(PropagatorField, par().q3);
+    auto                  &q3 = envGet(SlicedPropagator, par().q3);
     auto                  &q4 = envGet(PropagatorField, par().q4);
     Gamma                 g5(Gamma::Algebra::Gamma5);
 
@@ -196,7 +197,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
 
         r.info.op = G.g;
         // two traces
-        corr = trace(q1*adj(q2)*g5*G*q4*G)*trace(q3*g5);
+        corr = trace(q1*adj(q2)*g5*G*q4*G)*trace(q3[par().tf]*g5);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
@@ -206,7 +207,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
         r.info.trace = 2;
         result.push_back(r);
         // three traces
-        corr = trace(q1*adj(q2)*g5*G)*trace(q4*G)*trace(q3*g5);
+        corr = trace(q1*adj(q2)*g5*G)*trace(q4*G)*trace(q3[par().tf]*g5);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
