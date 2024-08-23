@@ -86,7 +86,8 @@ public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
                                         Gamma::Algebra, in,
                                         Gamma::Algebra, out,
-                                        Gamma::Algebra, op,
+                                        Gamma::Algebra, op1,
+                                        Gamma::Algebra, op2,
                                         unsigned int,   trace);
     };
     typedef Correlator<Metadata> Result;
@@ -174,16 +175,39 @@ void TWeakNonEye3pt<FImpl>::execute(void)
     Gamma               gIn(par().gammaIn), gOut(par().gammaOut);
     Gamma               g5(Gamma::Algebra::Gamma5);
 
+    const std::array<std::pair<const Gamma::Algebra,const Gamma::Algebra>, 16> gH = {{
+        { Gamma::Algebra::GammaX       , Gamma::Algebra::GammaX       },
+        { Gamma::Algebra::GammaY       , Gamma::Algebra::GammaY       },
+        { Gamma::Algebra::GammaZ       , Gamma::Algebra::GammaZ       },
+        { Gamma::Algebra::GammaT       , Gamma::Algebra::GammaT       },
+        { Gamma::Algebra::GammaX       , Gamma::Algebra::GammaXGamma5 },
+        { Gamma::Algebra::GammaY       , Gamma::Algebra::GammaYGamma5 },
+        { Gamma::Algebra::GammaZ       , Gamma::Algebra::GammaZGamma5 },
+        { Gamma::Algebra::GammaT       , Gamma::Algebra::GammaTGamma5 },
+        { Gamma::Algebra::GammaXGamma5 , Gamma::Algebra::GammaX       },
+        { Gamma::Algebra::GammaYGamma5 , Gamma::Algebra::GammaY       },
+        { Gamma::Algebra::GammaZGamma5 , Gamma::Algebra::GammaZ       },
+        { Gamma::Algebra::GammaTGamma5 , Gamma::Algebra::GammaT       },
+        { Gamma::Algebra::GammaXGamma5 , Gamma::Algebra::GammaXGamma5 },
+        { Gamma::Algebra::GammaYGamma5 , Gamma::Algebra::GammaYGamma5 },
+        { Gamma::Algebra::GammaZGamma5 , Gamma::Algebra::GammaZGamma5 },
+        { Gamma::Algebra::GammaTGamma5 , Gamma::Algebra::GammaTGamma5 }
+    }};
+
     envGetTmp(ComplexField, corr);
     r.info.in  = par().gammaIn;
     r.info.out = par().gammaOut;
-    for (auto &G: Gamma::gall)
+    for (auto &GHpair: gH)
     {
+        const Gamma& GH1 = Gamma(GHpair.first);
+        const Gamma& GH2 = Gamma(GHpair.second);
+
         SlicedComplex buf;
 
-        r.info.op = G.g;
+        r.info.op1 = GH1.g;
+        r.info.op2 = GH2.g;
         // one trace
-        corr = trace(ql*adj(gIn)*g5*adj(qbl)*g5*G*qbr*gOut*g5*adj(qr)*g5*G);
+        corr = trace(ql*adj(gIn)*g5*adj(qbl)*g5*GH1*qbr*gOut*g5*adj(qr)*g5*GH2);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
@@ -193,7 +217,7 @@ void TWeakNonEye3pt<FImpl>::execute(void)
         r.info.trace = 1;
         result.push_back(r);
         // two traces
-        corr = trace(ql*adj(gIn)*g5*adj(qbl)*g5*G)*trace(qbr*gOut*g5*adj(qr)*g5*G);
+        corr = trace(ql*adj(gIn)*g5*adj(qbl)*g5*GH1)*trace(qbr*gOut*g5*adj(qr)*g5*GH2);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)

@@ -106,7 +106,8 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        Gamma::Algebra, op,
+                                        Gamma::Algebra, op1,
+                                        Gamma::Algebra, op2,
                                         unsigned int,   trace);
     };
     typedef Correlator<Metadata> Result;
@@ -191,14 +192,37 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
     auto                  &q4 = envGet(PropagatorField, par().q4);
     Gamma                 g5(Gamma::Algebra::Gamma5);
 
+    const std::array<std::pair<const Gamma::Algebra,const Gamma::Algebra>, 16> gH = {{
+        { Gamma::Algebra::GammaX       , Gamma::Algebra::GammaX       },
+        { Gamma::Algebra::GammaY       , Gamma::Algebra::GammaY       },
+        { Gamma::Algebra::GammaZ       , Gamma::Algebra::GammaZ       },
+        { Gamma::Algebra::GammaT       , Gamma::Algebra::GammaT       },
+        { Gamma::Algebra::GammaX       , Gamma::Algebra::GammaXGamma5 },
+        { Gamma::Algebra::GammaY       , Gamma::Algebra::GammaYGamma5 },
+        { Gamma::Algebra::GammaZ       , Gamma::Algebra::GammaZGamma5 },
+        { Gamma::Algebra::GammaT       , Gamma::Algebra::GammaTGamma5 },
+        { Gamma::Algebra::GammaXGamma5 , Gamma::Algebra::GammaX       },
+        { Gamma::Algebra::GammaYGamma5 , Gamma::Algebra::GammaY       },
+        { Gamma::Algebra::GammaZGamma5 , Gamma::Algebra::GammaZ       },
+        { Gamma::Algebra::GammaTGamma5 , Gamma::Algebra::GammaT       },
+        { Gamma::Algebra::GammaXGamma5 , Gamma::Algebra::GammaXGamma5 },
+        { Gamma::Algebra::GammaYGamma5 , Gamma::Algebra::GammaYGamma5 },
+        { Gamma::Algebra::GammaZGamma5 , Gamma::Algebra::GammaZGamma5 },
+        { Gamma::Algebra::GammaTGamma5 , Gamma::Algebra::GammaTGamma5 }
+    }};
+
     envGetTmp(ComplexField, corr);
-    for (auto &G: Gamma::gall)
+    for (auto &GHpair: gH)
     {
+        const Gamma& GH1 = Gamma(GHpair.first);
+        const Gamma& GH2 = Gamma(GHpair.second);
+        
         SlicedComplex buf;
 
-        r.info.op = G.g;
+        r.info.op1 = GH1.g;
+        r.info.op2 = GH2.g;
         // two traces
-        corr = trace(q1*adj(q2)*g5*G*q4*G)*trace(q3[par().tf]*g5);
+        corr = trace(q1*adj(q2)*g5*GH1*q4*GH2)*trace(q3[par().tf]*g5);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
@@ -208,7 +232,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
         r.info.trace = 2;
         result.push_back(r);
         // three traces
-        corr = trace(q1*adj(q2)*g5*G)*trace(q4*G)*trace(q3[par().tf]*g5);
+        corr = trace(q1*adj(q2)*g5*GH1)*trace(q4*GH2)*trace(q3[par().tf]*g5);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
