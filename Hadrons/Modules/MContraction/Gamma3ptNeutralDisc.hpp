@@ -198,6 +198,10 @@ void TGamma3ptNeutralDisc<FImpl>::execute(void)
     parseGammaString(gammaList);
 
     envGetTmp(ComplexField, corr);
+
+    PropagatorField tmp_in  = q1*adj(q2)*g5;
+    SitePropagator  tmp_out = trace(q3[par().tf]*g5);
+
     for (auto &g: gammaList)
     {
         const Gamma& G = Gamma(g);
@@ -205,7 +209,7 @@ void TGamma3ptNeutralDisc<FImpl>::execute(void)
         SlicedComplex buf;
 
         r.info.gamma = G.g;
-        corr = trace(q1*adj(q2)*g5*G)*trace(q3[par().tf]*g5);
+        corr = trace(tmp_in*G)*tmp_out;
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
