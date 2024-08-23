@@ -200,7 +200,7 @@ void TGamma3ptNeutralDisc<FImpl>::execute(void)
     envGetTmp(ComplexField, corr);
 
     PropagatorField tmp_in  = q1*adj(q2)*g5;
-    SitePropagator  tmp_out = trace(q3[par().tf]*g5);
+    ComplexD        tmp_out = trace(q3[par().tf]*g5);
 
     for (auto &g: gammaList)
     {
