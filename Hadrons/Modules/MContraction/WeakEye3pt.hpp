@@ -200,6 +200,9 @@ void TWeakEye3pt<FImpl>::execute(void)
     envGetTmp(ComplexField, corr);
     r.info.in  = par().gammaIn;
     r.info.out = par().gammaOut;
+
+    PropagatorField tmp = qbr*gOut*qst*adj(gIn)*g5*adj(qbl)*g5;
+
     for (auto &GHpair: gH)
     {
         const Gamma& GH1 = Gamma(GHpair.first);
@@ -210,7 +213,7 @@ void TWeakEye3pt<FImpl>::execute(void)
         r.info.op1 = GH1.g;
         r.info.op2 = GH2.g;
         // one trace
-        corr = trace(qbr*gOut*qst*adj(gIn)*g5*adj(qbl)*g5*GH1*loop*GH2);
+        corr = trace(tmp*GH1*loop*GH2);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
@@ -220,7 +223,7 @@ void TWeakEye3pt<FImpl>::execute(void)
         r.info.trace = 1;
         result.push_back(r);
         // two traces
-        corr = trace(qbr*gOut*qst*adj(gIn)*g5*adj(qbl)*g5*GH1)*trace(loop*GH2);
+        corr = trace(tmp*GH1)*trace(loop*GH2);
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
