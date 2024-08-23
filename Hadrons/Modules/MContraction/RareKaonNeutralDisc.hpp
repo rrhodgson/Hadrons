@@ -212,6 +212,10 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
     }};
 
     envGetTmp(ComplexField, corr);
+
+    PropagatorField tmp_in  = q1*adj(q2)*g5;
+    SitePropagator  tmp_out = trace(q3[par().tf]*g5);
+
     for (auto &GHpair: gH)
     {
         const Gamma& GH1 = Gamma(GHpair.first);
@@ -222,7 +226,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
         r.info.op1 = GH1.g;
         r.info.op2 = GH2.g;
         // two traces
-        corr = trace(q1*adj(q2)*g5*GH1*q4*GH2)*trace(q3[par().tf]*g5);
+        corr = trace(tmp_in*GH1*q4*GH2)*tmp_out;
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
@@ -232,7 +236,7 @@ void TRareKaonNeutralDisc<FImpl>::execute(void)
         r.info.trace = 2;
         result.push_back(r);
         // three traces
-        corr = trace(q1*adj(q2)*g5*GH1)*trace(q4*GH2)*trace(q3[par().tf]*g5);
+        corr = trace(tmp_in*GH1)*trace(q4*GH2)*tmp_out;
         sliceSum(corr, buf, Tp);
         r.corr.clear();
         for (unsigned int t = 0; t < buf.size(); ++t)
