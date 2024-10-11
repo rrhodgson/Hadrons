@@ -231,12 +231,9 @@ void TGamma3pt<FImpl1, FImpl2, FImpl3>::execute(void)
 
     envGetTmp(LatticeComplex, ph);
     ph = Zero();
-
     if (mom_[0] != 0 || mom_[1] != 0 || mom_[2] != 0) 
     {
         LOG(Message) << "Adding momentum phase " << mom_ << std::endl;
-
-        Complex           i(0.0,1.0);
 
         envGetTmp(LatticeComplex, coor);
         for(unsigned int mu = 0; mu < 3; mu++)
@@ -244,8 +241,9 @@ void TGamma3pt<FImpl1, FImpl2, FImpl3>::execute(void)
             LatticeCoordinate(coor, mu);
             ph = ph + (mom_[mu]/env().getDim(mu))*coor;
         }
-        ph = exp((Real)(2*M_PI)*i*ph);
     }
+    Complex i(0.0,1.0);
+    ph = exp((Real)(2*M_PI)*i*ph);
 
     envGetTmp(LatticeComplex, c);
     for (unsigned int i = 0; i < result.size(); ++i)
