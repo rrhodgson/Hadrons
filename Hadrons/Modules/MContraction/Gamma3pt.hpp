@@ -77,6 +77,7 @@ public:
                                     std::string,  q2,
                                     std::string,  q3,
                                     std::string,  gamma,
+                                    std::string,  mom,
                                     unsigned int, tSnk,
                                     std::string,  output);
 };
@@ -105,6 +106,8 @@ public:
     virtual std::vector<std::string> getOutput(void);
     virtual std::vector<std::string> getOutputFiles(void);
     virtual void parseGammaString(std::vector<Gamma::Algebra> &gammaList);
+
+    std::vector<Real> mom_;
 protected:
     // setup
     virtual void setup(void);
@@ -155,6 +158,21 @@ std::vector<std::string> TGamma3pt<FImpl1, FImpl2, FImpl3>::getOutputFiles(void)
 template <typename FImpl1, typename FImpl2, typename FImpl3>
 void TGamma3pt<FImpl1, FImpl2, FImpl3>::setup(void)
 {
+    auto parse_vector = [](const std::string &vec, int dim,
+            const std::string &desc)
+    {
+        std::vector<Real> res = strToVec<Real>(vec);
+        if(res.size() != dim) {
+            HADRONS_ERROR(Size, desc + " has "
+                    + std::to_string(res.size()) + " instead of "
+                    + std::to_string(dim) + " components");
+        }
+        return res;
+    };
+    mom_      = parse_vector(par().mom, env().getNd()-1, "momentum");
+
+    envTmpLat(LatticeComplex, "coor");
+    envTmpLat(LatticeComplex, "ph");
     envTmpLat(LatticeComplex, "c");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -210,11 +228,30 @@ void TGamma3pt<FImpl1, FImpl2, FImpl3>::execute(void)
     // Extract relevant timeslice of sinked propagator q1, then contract &
     // sum over all spacial positions of gamma insertion.
     SitePropagator1 q1Snk = q1[par().tSnk];
+
+    envGetTmp(LatticeComplex, ph);
+    ph = Zero();
+
+    if (mom_[0] != 0 || mom_[1] != 0 || mom_[2] != 0) 
+    {
+        LOG(Message) << "Adding momentum phase " << mom_ << std::endl;
+
+        Complex           i(0.0,1.0);
+
+        envGetTmp(LatticeComplex, coor);
+        for(unsigned int mu = 0; mu < 3; mu++)
+        {
+            LatticeCoordinate(coor, mu);
+            ph = ph + (mom_[mu]/env().getDim(mu))*coor;
+        }
+        ph = exp((Real)(2*M_PI)*i*ph);
+    }
+
     envGetTmp(LatticeComplex, c);
     for (unsigned int i = 0; i < result.size(); ++i)
     {
         Gamma gamma(gammaList[i]);
-        c = trace(g5*q1Snk*adj(q2)*(g5*gamma)*q3);
+        c = trace(g5*q1Snk*adj(q2)*(g5*gamma)*q3)*ph;
         sliceSum(c, buf, Tp);
         for (unsigned int t = 0; t < buf.size(); ++t)
         {
