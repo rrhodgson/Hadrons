@@ -36,7 +36,7 @@ BEGIN_HADRONS_NAMESPACE
 
 /******************************************************************************
  *                         DMixingTopB                                        *
- *                (Fig. 4 (B) in arxiv:2504.161189)  
+ *                (Fig. 4 (B) in arxiv:2504.16189)  
  *                     qCL   ┌───┐       qUR
  *                 /----<----| r |---------<---------\
  *                /          └───┘----\               \
@@ -45,7 +45,7 @@ BEGIN_HADRONS_NAMESPACE
  *               \         qInt1 \       \             /   
  *                \               \----┌───┐          /       
  *                 \--------->---------| r'|---->----/  
- *                          qUL        └───┘  qUR
+ *                          qUL        └───┘  qCR
  *
  * four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)

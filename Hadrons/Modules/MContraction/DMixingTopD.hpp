@@ -36,7 +36,7 @@ BEGIN_HADRONS_NAMESPACE
 
 /******************************************************************************
  *                         DMixingTopD                                        *
- *                    (Fig. 4 (D) in arxiv:2504.161189)  
+ *                    (Fig. 4 (D) in arxiv:2504.16189)  
  *             qCL   ┌───┐                 qUR
  *         /----<----| r |-----------------<--------------\
  *        /          └───┘                                 \
@@ -45,7 +45,7 @@ BEGIN_HADRONS_NAMESPACE
  *       \           \->-/ qLoop1          \     /          /   
  *        \                                 ┌───┐          /       
  *         \-------------->-----------------| r'|---->----/  
- *                       qUL                └───┘  qUR
+ *                       qUL                └───┘  qCR
  *
  * four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)
@@ -75,6 +75,14 @@ class TDMixingTopD: public Module<DMixingTopDPar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
+    class Metadata: Serializable
+    {
+    public:
+        GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
+                                        std::string,    parity,
+                                        std::string,    rr);
+    };
+    typedef Correlator<Metadata> Result;
 public:
     // constructor
     TDMixingTopD(const std::string name);
@@ -139,6 +147,14 @@ template <typename FImpl>
 void TDMixingTopD<FImpl>::setup(void)
 {
     envTmpLat(ComplexField, "corr");
+    envTmpLat(PropagatorField, "parPlusR1L1");
+    envTmpLat(PropagatorField, "parPlusR2L1");
+    envTmpLat(PropagatorField, "parMinusR1L1");
+    envTmpLat(PropagatorField, "parMinusR2L1");
+    envTmpLat(PropagatorField, "parPlusR1L2");
+    envTmpLat(PropagatorField, "parPlusR2L2");
+    envTmpLat(PropagatorField, "parMinusR1L2");
+    envTmpLat(PropagatorField, "parMinusR2L2");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
@@ -146,7 +162,101 @@ void TDMixingTopD<FImpl>::setup(void)
 template <typename FImpl>
 void TDMixingTopD<FImpl>::execute(void)
 {
+    LOG(Message) << "Computing D-meson mixing diagram, topology D" << std::endl;
+    LOG(Message) << "qULeft  : " << par().qULeft << std::endl;
+    LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
+    LOG(Message) << "qURight : " << par().qURight << std::endl;
+    LOG(Message) << "qCRight : " << par().qCRight << std::endl;
+    LOG(Message) << "qLoop1  : " << par().qLoop1 << std::endl;
+    LOG(Message) << "qLoop2  : " << par().qLoop2 << std::endl;
 
+    std::vector<Result> result;
+    Result              r;
+
+    auto                &qul  = envGet(PropagatorField, par().qULeft);
+    auto                &qcl  = envGet(PropagatorField, par().qCLeft);
+    auto                &qur  = envGet(PropagatorField, par().qURight);
+    auto                &qcr  = envGet(PropagatorField, par().qCRight);
+    auto                &ql1  = envGet(PropagatorField, par().qLoop1);
+    auto                &ql2  = envGet(PropagatorField, par().qLoop2);
+
+    Gamma               g5(Gamma::Algebra::Gamma5);
+    Gamma               gVX(Gamma::Algebra::GammaX);
+    Gamma               gVY(Gamma::Algebra::GammaY);
+    Gamma               gVZ(Gamma::Algebra::GammaZ);
+    Gamma               gVT(Gamma::Algebra::GammaT);
+    Gamma               gAX(Gamma::Algebra::GammaXGamma5);
+    Gamma               gAY(Gamma::Algebra::GammaYGamma5);
+    Gamma               gAZ(Gamma::Algebra::GammaZGamma5);
+    Gamma               gAT(Gamma::Algebra::GammaTGamma5);
+    std::vector<Gamma>      GV = {gVX, gVY, gVZ, gVT};
+    std::vector<Gamma>      GA = {gAX, gAY, gAZ, gAT};
+
+    envGetTmp(ComplexField, corr);
+    envGetTmp(PropagatorField, parPlusR1L1);
+    envGetTmp(PropagatorField, parPlusR2L1);
+    envGetTmp(PropagatorField, parMinusR1L1);
+    envGetTmp(PropagatorField, parMinusR2L1);
+    envGetTmp(PropagatorField, parPlusR1L2);
+    envGetTmp(PropagatorField, parPlusR2L2);
+    envGetTmp(PropagatorField, parMinusR1L2);
+    envGetTmp(PropagatorField, parMinusR2L2);
+
+    SlicedComplex buf;
+
+    // rr'=11  (one single big trace)
+    // for the moment, all gamma5 written explicitly - can simplyfy this
+    // corr = tr(g5*g5*adj(qcl)*g5*G11*ql1*G12*qur*g5*g5*adj(qcr)*g5*G21*ql2*G22*qul); 
+   
+    // VV
+    for (const auto &G: GV)
+    {
+        auto obj1 = G*ql1*G;
+	parPlusR1L1 += obj1;
+	obj1 = G*ql2*G;
+	parPlusR1L2 += obj1;
+        //auto obj2 = G*trace(ql1*G);
+	//parPlusR2 += obj2;
+    }
+    // AA
+    for (const auto &G: GA)
+    {
+        auto obj1 = G*ql1*G;
+	parPlusR1L1 += obj1;
+	obj1 = G*ql2*G;
+	parPlusR1L2 += obj1;
+    }
+    parMinusR1L1 = parPlusR1L1 * g5;
+    parMinusR1L2 = parPlusR1L2 * g5;
+
+    // parity = + , rr = 11
+    corr = trace(g5*g5*adj(qcl)*parPlusR1L1*qur*g5*g5*adj(qcr)*g5*parPlusR1L2*qul);
+    sliceSum(corr, buf, Tp);
+    r.corr.clear();
+    for (unsigned int t = 0; t < buf.size(); ++t)
+    {
+        r.corr.push_back(TensorRemove(buf[t]));
+    }
+    r.info.parity = "+";
+    r.info.rr     = "11";
+    result.push_back(r);
+
+    // parity = - , rr = 11
+    corr = trace(g5*g5*adj(qcl)*parMinusR1L1*qur*g5*g5*adj(qcr)*g5*parMinusR1L2*qul);
+    sliceSum(corr, buf, Tp);
+    r.corr.clear();
+    for (unsigned int t = 0; t < buf.size(); ++t)
+    {
+        r.corr.push_back(TensorRemove(buf[t]));
+    }
+    r.info.parity = "-";
+    r.info.rr     = "11";
+    result.push_back(r);
+
+    // save result, and hand it to environment
+    saveResult(par().output, "DMixingTopD", result);
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
 }
 
 
