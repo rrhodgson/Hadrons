@@ -295,7 +295,8 @@ void TA2ASmearedMesonField<FImpl>::setup(void)
 template <typename FImpl>
 void TA2ASmearedMesonField<FImpl>::execute(void)
 {
-    //get copies of left and right
+#if 0
+    	//get copies of left and right
     envGetTmp(std::vector<FermionField>, left);
     envGetTmp(std::vector<FermionField>, right);
     {
@@ -442,6 +443,7 @@ void TA2ASmearedMesonField<FImpl>::smearing_weight(
         *out_it=dist_left * dist_right * FTnorm;
         out_it++;
     }
+#endif
 }
 
 END_MODULE_NAMESPACE

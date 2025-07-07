@@ -177,7 +177,8 @@ void TSigmaToNucleonNonEye<FImpl>::setup(void)
 template <typename FImpl>
 void TSigmaToNucleonNonEye<FImpl>::execute(void)
 {
-    const Gamma GammaB(Gamma::Algebra::SigmaXZ); // C*gamma_5
+#if 0
+    	const Gamma GammaB(Gamma::Algebra::SigmaXZ); // C*gamma_5
     const Gamma Id(Gamma::Algebra::Identity); // C*gamma_5
 
     LOG(Message) << "Computing sigma-to-nucleon contractions '" << getName() << "'" << std::endl;
@@ -230,7 +231,7 @@ void TSigmaToNucleonNonEye<FImpl>::execute(void)
     saveResult(par().output, "stnNonEye", result);
     auto &out = envGet(HadronsSerializable, getName());
     out = result;
-
+#endif
 }
 
 END_MODULE_NAMESPACE

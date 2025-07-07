@@ -219,7 +219,8 @@ void TA2AMesonField<FImpl>::setup(void)
 template <typename FImpl>
 void TA2AMesonField<FImpl>::execute(void)
 {
-    auto &left  = envGet(std::vector<FermionField>, par().left);
+#if 0
+    	auto &left  = envGet(std::vector<FermionField>, par().left);
     auto &right = envGet(std::vector<FermionField>, par().right);
 
     int nt         = env().getDim().back();
@@ -310,6 +311,7 @@ void TA2AMesonField<FImpl>::execute(void)
 
     envGetTmp(Computation, computation);
     computation.execute(left, right, kernel, ionameFn, filenameFn, metadataFn);
+#endif
 }
 
 END_MODULE_NAMESPACE

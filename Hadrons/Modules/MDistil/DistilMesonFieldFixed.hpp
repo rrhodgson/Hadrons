@@ -268,7 +268,8 @@ void TDistilMesonFieldFixed<FImpl>::setup(void)
 template <typename FImpl>
 void TDistilMesonFieldFixed<FImpl>::execute(void)
 {
-    // temps
+#if 0
+    	// temps
     envGetTmp(DistilVector, dvl);
     envGetTmp(DistilVector, dvr);
     envGetTmp(Vector<HADRONS_DISTIL_IO_TYPE>, block_buf);
@@ -488,6 +489,7 @@ void TDistilMesonFieldFixed<FImpl>::execute(void)
     LOG(Message) << "Average kernel perf (flops) : "    << computation.blockFlops_/computation.blockCounter_    << " Gflop/s/node " << std::endl;
     LOG(Message) << "Average kernel perf (read) : "     << computation.blockBytes_/computation.blockCounter_    << " GB/s/node "    << std::endl;
     LOG(Message) << "Average IO speed (write) : "       << computation.blockIoSpeed_/computation.blockCounter_  << " MB/s "    << std::endl;
+#endif
 }
 
 END_MODULE_NAMESPACE

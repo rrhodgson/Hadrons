@@ -317,7 +317,8 @@ void TBaryonGamma3pt<FImpl>::parseGammaLRString(std::string gammas, std::vector<
 template <typename FImpl>
 void TBaryonGamma3pt<FImpl>::execute(void)
 {
-    std::string qL = {par().quarksL[0], par().quarksL[1], par().quarksL[2]};
+#if 0
+    	std::string qL = {par().quarksL[0], par().quarksL[1], par().quarksL[2]};
     std::string qR = {par().quarksR[0], par().quarksR[1], par().quarksR[2]};
     char qLJ = par().quarksJ[0];
     char qRJ = par().quarksJ[1];
@@ -517,6 +518,7 @@ void TBaryonGamma3pt<FImpl>::execute(void)
     saveResult(par().output, "baryongamma3pt", result);
     auto &out = envGet(HadronsSerializable, getName());
     out = result;
+#endif
 }
 
 END_MODULE_NAMESPACE

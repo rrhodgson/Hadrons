@@ -229,7 +229,8 @@ void TBaryon<FImpl>::setup(void)
 template <typename FImpl>
 void TBaryon<FImpl>::execute(void)
 {
-    // Check shuffle is a permutation of "123"
+#if 0
+    	// Check shuffle is a permutation of "123"
     assert(par().shuffle.size()==3 && "shuffle parameter must be 3 characters long");
     std::string shuffle_tmp = par().shuffle;
     std::sort(shuffle_tmp.begin(), shuffle_tmp.end());
@@ -509,7 +510,7 @@ void TBaryon<FImpl>::execute(void)
         auto &out = envGet(HadronsSerializable, getName());
         out = resultMat;
     }
-
+#endif
 }
 
 END_MODULE_NAMESPACE

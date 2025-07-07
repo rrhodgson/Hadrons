@@ -173,7 +173,8 @@ void TXiToSigmaEye<FImpl>::setup(void)
 template <typename FImpl>
 void TXiToSigmaEye<FImpl>::execute(void)
 {
-    const Gamma GammaB(Gamma::Algebra::SigmaXZ); // C*gamma_5
+#if 0
+    	const Gamma GammaB(Gamma::Algebra::SigmaXZ); // C*gamma_5
     const Gamma Id(Gamma::Algebra::Identity); // C*gamma_5
 
     LOG(Message) << "Computing xi-to-sigma contractions '" << getName() << "'" << std::endl;
@@ -227,7 +228,7 @@ void TXiToSigmaEye<FImpl>::execute(void)
     saveResult(par().output, "xtsEye", result);
     auto &out = envGet(HadronsSerializable, getName());
     out = result;
-
+#endif
 }
 
 END_MODULE_NAMESPACE
