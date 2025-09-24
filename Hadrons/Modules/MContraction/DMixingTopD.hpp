@@ -57,6 +57,7 @@ BEGIN_HADRONS_NAMESPACE
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
 
+
 class DMixingTopDPar: Serializable
 {
 public:
@@ -96,6 +97,9 @@ public:
     virtual void setup(void);
     // execution
     virtual void execute(void);
+    // bespoke subcontractions
+    virtual std::vector<SpinColourMatrixD> contract_D_half(const LatticeSpinColourMatrixD& prop_c, const LatticeSpinColourMatrixD& prop_u, const LatticeSpinColourMatrixD& loop);
+    virtual std::vector<std::vector<ComplexD>> contract_D(const std::vector<SpinColourMatrixD>& half_if, const std::vector<SpinColourMatrixD>& half_fi);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -141,6 +145,34 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 
     return output;
 }
+
+template <typename FImpl>
+std::vector<SpinColourMatrixD> TDMixingTopD<FImpl>::contract_D_half(const LatticeSpinColourMatrixD& prop_c, const LatticeSpinColourMatrixD& prop_u, const LatticeSpinColourMatrixD& loop) {
+	Gamma G5(Gamma::Algebra::Gamma5);
+
+	LatticePropagator tmp = G5*adj(prop_u)*G5 * loop * prop_c;
+	std::vector<LatticePropagator::scalar_object> ret;
+	sliceSum(tmp, ret, Tp);
+	return ret;
+};
+
+template <typename FImpl>
+std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::vector<SpinColourMatrixD>& half_if, const std::vector<SpinColourMatrixD>& half_fi) {
+	Gamma G5(Gamma::Algebra::Gamma5);
+	Gamma GT(Gamma::Algebra::GammaT);
+
+	Gamma Gsrc = G5;
+	Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
+
+	int Nt = half_if.size();
+
+	std::vector<std::vector<ComplexD>> corr(Nt,std::vector<ComplexD>(Nt,0.));
+	for (int t1=0; t1<Nt; t1++)
+	for (int t2=0; t2<Nt; t2++)
+		corr[t1][t2] = TensorRemove(trace( half_if[t1] * Gsrc * half_fi[t2] * Gsnk ));
+	
+	return corr;
+};
 
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
