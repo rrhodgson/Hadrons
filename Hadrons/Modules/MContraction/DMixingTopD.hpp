@@ -185,7 +185,7 @@ template <typename FImpl>
 std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>::GH_VVAA_cap(const LatticeSpinColourMatrixD& prop) {
 	GridBase* grid = prop.Grid();
 
-	array<Gamma,8> GHs{Gamma(Gamma::Algebra::GammaX),
+	std::array<Gamma,8> GHs{Gamma(Gamma::Algebra::GammaX),
 	              	Gamma(Gamma::Algebra::GammaY),
 	              	Gamma(Gamma::Algebra::GammaZ),
 	              	Gamma(Gamma::Algebra::GammaT),
@@ -252,6 +252,7 @@ void TDMixingTopD<FImpl>::execute(void)
     std::vector<Result>                 result;
     Result                              res;
 
+    const int Nt{env().getDim(Tdir)};
     GridCartesian * grid = envGetGrid(FermionField);
 
     auto                &qul  = envGet(PropagatorField, par().qULeft);
@@ -265,8 +266,8 @@ void TDMixingTopD<FImpl>::execute(void)
 
     //std::map<std::string, std::vector<SpinColourMatrixD>> half_if;
     //std::map<std::string, std::vector<SpinColourMatrixD>> half_fi;
-    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_lr( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2))
-    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_rl( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2))
+    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_lr( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2)));
+    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_rl( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2)));
 
 
     //map<std::string, Gamma> parityG;
@@ -311,8 +312,7 @@ void TDMixingTopD<FImpl>::execute(void)
 	    for (int p = 0; p < 2; p++) 
 	    {
                 res.info.parity = (p == 0) ? "+" : "-";
-		//map<std::string, std::vector<std::vector<ComplexD>>> buf;
-                std::vector<std::vector<ComplexD>> buf(Neta, std::vector<ComplexD>(Neta));
+		std::vector<std::vector<std::vector<std::vector<ComplexD>>>> buf(Neta, std::vector<std::vector<std::vector<ComplexD>>>(Neta, std::vector<std::vector<ComplexD>>(Nt, std::vector<ComplexD>(Nt))));
 		for (int i=0; i<Neta; i++) 
 		{
 		    for (int j=0; j<Neta; j++) 
@@ -333,7 +333,7 @@ void TDMixingTopD<FImpl>::execute(void)
 				{
 				    for (int t2=0; t2<Nt; t2++) 
 				    {
-				        tmp.at(t1).at(t2) += c.at(t1).at(t2);
+				        tmp[t1][t2] += c[t1][t2];
 				    }
 				}
 			    }
@@ -345,7 +345,7 @@ void TDMixingTopD<FImpl>::execute(void)
 			{
 			    for (int t2=0; t2<Nt; t2++) 
 			    {
-			        tmp.at(t1).at(t2) /= imax*(imax-1); 
+			        tmp[t1][t2] /= imax*(imax-1); 
 			    }
 			}
 		    }
