@@ -282,8 +282,8 @@ void TDMixingTopD<FImpl>::execute(void)
             GdsG_pp[1] = tmp.second; // r2 
             for (int r = 0; r < 2; r++) 
 	    {
-	        half_lr[i][r] = contract_D_half(qcl, qur, GdsG_pp[i + Neta * (r-1)] * parityG.at(p));
-	        half_rl[i][r] = contract_D_half(qcr, qul, GdsG_pp[i + Neta * (r-1)] * parityG.at(p));
+	        half_lr[i][r] = contract_D_half(qcl, qur, GdsG_pp[i + Neta * r] * parityG[p]);
+	        half_rl[i][r] = contract_D_half(qcr, qul, GdsG_pp[i + Neta * r] * parityG[p]);
 	    }
 	}
     
@@ -308,6 +308,7 @@ void TDMixingTopD<FImpl>::execute(void)
 		    std::vector<std::vector<ComplexD>> tmp = std::vector<std::vector<ComplexD>>(Nt,std::vector<ComplexD>(Nt,0.));
 		    for (int i=0; i<imax; i++) {
 		        for (int j=0; j<imax; j++) {
+			    // this is assuming both loops have same noises	
 			    if (i != j) {
 			        const auto& c = buf[i][j];
 				for (int t1=0; t1<Nt; t1++) 
