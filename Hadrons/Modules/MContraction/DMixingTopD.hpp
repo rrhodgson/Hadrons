@@ -80,10 +80,11 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
+                                        std::string,    rr,
                                         std::string,    parity,
-                                        std::string,    rr);
+					std::string,    eta_max);
     };
-    typedef Correlator<Metadata> Result;
+    typedef Correlator<Metadata, std::vector<ComplexD>> Result;
 public:
     // constructor
     TDMixingTopD(const std::string name);
@@ -100,6 +101,7 @@ public:
     // bespoke subcontractions
     virtual std::vector<SpinColourMatrixD> contract_D_half(const LatticeSpinColourMatrixD& prop_c, const LatticeSpinColourMatrixD& prop_u, const LatticeSpinColourMatrixD& loop);
     virtual std::vector<std::vector<ComplexD>> contract_D(const std::vector<SpinColourMatrixD>& half_if, const std::vector<SpinColourMatrixD>& half_fi);
+    virtual std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> GH_VVAA_cap(const LatticeSpinColourMatrixD& prop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -161,6 +163,7 @@ std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::ve
 	Gamma G5(Gamma::Algebra::Gamma5);
 	Gamma GT(Gamma::Algebra::GammaT);
 
+	// Kept general in case anyone ever wants to play with this
 	Gamma Gsrc = G5;
 	Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
 
@@ -168,10 +171,47 @@ std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::ve
 
 	std::vector<std::vector<ComplexD>> corr(Nt,std::vector<ComplexD>(Nt,0.));
 	for (int t1=0; t1<Nt; t1++)
-	for (int t2=0; t2<Nt; t2++)
-		corr[t1][t2] = TensorRemove(trace( half_if[t1] * Gsrc * half_fi[t2] * Gsnk ));
+	{
+	    for (int t2=0; t2<Nt; t2++)
+	    {
+                corr[t1][t2] = TensorRemove(trace( half_if[t1] * Gsrc * half_fi[t2] * Gsnk ));
+	    }
+	}
 	
 	return corr;
+};
+
+template <typename FImpl>
+std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>::GH_VVAA_cap(const LatticeSpinColourMatrixD& prop) {
+	GridBase* grid = prop.Grid();
+
+	array<Gamma,8> GHs{Gamma(Gamma::Algebra::GammaX),
+	              	Gamma(Gamma::Algebra::GammaY),
+	              	Gamma(Gamma::Algebra::GammaZ),
+	              	Gamma(Gamma::Algebra::GammaT),
+	              	Gamma(Gamma::Algebra::GammaXGamma5),
+	              	Gamma(Gamma::Algebra::GammaYGamma5),
+	              	Gamma(Gamma::Algebra::GammaZGamma5),
+	              	Gamma(Gamma::Algebra::GammaTGamma5)};
+
+	SpinColourMatrixD spId = Zero();
+	for (int s=0; s<4; s++)
+	{
+	    for (int c=0; c<3; c++)
+	    {
+		spId()(s,s)(c,c) = 1.;
+	    }
+	}
+
+        LatticeSpinColourMatrixD GTrPropG_VVAA(grid); GTrPropG_VVAA = Zero();
+	LatticeSpinColourMatrixD GPropG_VVAA(grid)  ; GPropG_VVAA   = Zero();
+	for (int g=0; g<GHs.size(); g++) 
+	{
+		Gamma GH = GHs[g];
+		GTrPropG_VVAA += spId * GH * trace(prop * GH);
+		GPropG_VVAA   +=        GH *       prop * GH ;
+	}
+	return std::make_pair(GTrPropG_VVAA, GPropG_VVAA);
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -188,6 +228,13 @@ void TDMixingTopD<FImpl>::setup(void)
     envTmpLat(PropagatorField, "parMinusR1L2");
     envTmpLat(PropagatorField, "parMinusR2L2");
     envCreate(HadronsSerializable, getName(), 1, 0);
+
+    if (par().qLoop1 != par().qLoop2)
+    {
+        HADRONS_ERROR(Argument, "Current implementation for identical loops only");
+    }
+
+
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -202,15 +249,123 @@ void TDMixingTopD<FImpl>::execute(void)
     LOG(Message) << "qLoop1  : " << par().qLoop1 << std::endl;
     LOG(Message) << "qLoop2  : " << par().qLoop2 << std::endl;
 
-    std::vector<Result> result;
-    Result              r;
+    std::vector<Result>                 result;
+    Result                              res;
+
+    GridCartesian * grid = envGetGrid(FermionField);
 
     auto                &qul  = envGet(PropagatorField, par().qULeft);
     auto                &qcl  = envGet(PropagatorField, par().qCLeft);
     auto                &qur  = envGet(PropagatorField, par().qURight);
     auto                &qcr  = envGet(PropagatorField, par().qCRight);
-    auto                &ql1  = envGet(PropagatorField, par().qLoop1);
-    auto                &ql2  = envGet(PropagatorField, par().qLoop2);
+    auto                &ql1  = envGet(std::vector<PropagatorField*>, par().qLoop1);
+    auto                &ql2  = envGet(std::vector<PropagatorField*>, par().qLoop2);
+
+    int Neta = ql1.size();
+
+    //std::map<std::string, std::vector<SpinColourMatrixD>> half_if;
+    //std::map<std::string, std::vector<SpinColourMatrixD>> half_fi;
+    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_lr( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2))
+    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_rl( Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(2))
+
+
+    //map<std::string, Gamma> parityG;
+    //parityG.emplace("+",Gamma(Gamma::Algebra::Identity));
+    //parityG.emplace("-",Gamma(Gamma::Algebra::Gamma5));
+
+    /*
+    std::vector<LatticeSpinColourMatrixD> GdsG_pp(2*Neta, grid);
+    for (int i=0; i<Neta; i++) 
+    {
+	auto tmp = GH_VVAA_cap(*ql1[i]);
+	GdsG_pp[i] = tmp.first; // r1 
+	GdsG_pp[i + Neta] = tmp.second;  // r2 
+    }
+    */
+
+    std::vector<Gamma> parityG(2);
+    parityG[0] = Gamma(Gamma::Algebra::Identity); // parity +
+    parityG[1] = Gamma(Gamma::Algebra::Gamma5);   // parity -
+    std::vector<LatticeSpinColourMatrixD> GdsG_pp(2, grid);
+    for (int i=0; i<Neta; i++) 
+    {
+	// here one has to add ql2 if one wants them to be allowed to be different
+	auto tmp = GH_VVAA_cap(*ql1[i]);  	
+	GdsG_pp[0] = tmp.first;  // r1 
+	GdsG_pp[1] = tmp.second; // r2 
+        for (int r = 0; r < 2; r++) 
+	{
+	    for (int p = 0; p < 2; p++) 
+	    {
+	        half_lr[i][r][p] = contract_D_half(qcl, qur, GdsG_pp[i + Neta * (r-1)] * parityG.at(p));
+	        half_rl[i][r][p] = contract_D_half(qcr, qul, GdsG_pp[i + Neta * (r-1)] * parityG.at(p));
+	    }
+	}
+    }
+    
+    for (int r = 0; r < 2; r++) 
+    {
+        for (int s = 0; r < 2; r++) 
+	{
+            res.info.rr = std::to_string(r+1) + std::to_string(s+1);
+	    for (int p = 0; p < 2; p++) 
+	    {
+                res.info.parity = (p == 0) ? "+" : "-";
+		//map<std::string, std::vector<std::vector<ComplexD>>> buf;
+                std::vector<std::vector<ComplexD>> buf(Neta, std::vector<ComplexD>(Neta));
+		for (int i=0; i<Neta; i++) 
+		{
+		    for (int j=0; j<Neta; j++) 
+		    {
+			buf[i][j] = contract_D(half_lr[i][r][p], half_rl[s][j][p]);
+		    }
+		}
+
+		// Average noises up to imax (+ remove diagonal terms)
+		for (int imax=1; imax<=Neta; imax++) 
+		{
+		    std::vector<std::vector<ComplexD>> tmp = std::vector<std::vector<ComplexD>>(Nt,std::vector<ComplexD>(Nt,0.));
+		    for (int i=0; i<imax; i++) {
+		        for (int j=0; j<imax; j++) {
+			    if (i != j) {
+			        const auto& c = buf[i][j];
+				for (int t1=0; t1<Nt; t1++) 
+				{
+				    for (int t2=0; t2<Nt; t2++) 
+				    {
+				        tmp.at(t1).at(t2) += c.at(t1).at(t2);
+				    }
+				}
+			    }
+			}
+		    }
+		    if (imax > 1) 
+		    {
+		        for (int t1=0; t1<Nt; t1++) 
+			{
+			    for (int t2=0; t2<Nt; t2++) 
+			    {
+			        tmp.at(t1).at(t2) /= imax*(imax-1); 
+			    }
+			}
+		    }
+		    res.info.eta_max = std::to_string(imax);
+                    res.corr.clear();
+		    res.corr = tmp;
+                    result.push_back(res);
+		}
+	    }
+	}
+    }
+
+    // save result, and hand it to environment
+    saveResult(par().output, "DMixingTopD", result);
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
+
+
+
+   /*
 
     Gamma               g5(Gamma::Algebra::Gamma5);
     Gamma               gVX(Gamma::Algebra::GammaX);
@@ -289,6 +444,7 @@ void TDMixingTopD<FImpl>::execute(void)
     saveResult(par().output, "DMixingTopD", result);
     auto &out = envGet(HadronsSerializable, getName());
     out = result;
+    */
 }
 
 
