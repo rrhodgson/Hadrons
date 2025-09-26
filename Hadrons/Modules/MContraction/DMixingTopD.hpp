@@ -289,7 +289,7 @@ void TDMixingTopD<FImpl>::execute(void)
     
         for (int r = 0; r < 2; r++) 
         {
-            for (int s = 0; r < 2; r++) 
+            for (int s = 0; s < 2; s++) 
 	    {
                 res.info.rr = std::to_string(r+1) + std::to_string(s+1);
                 res.info.parity = (p == 0) ? "+" : "-";
