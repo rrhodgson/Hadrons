@@ -111,7 +111,6 @@ std::vector<std::string> TDMixingTopA<FImpl>::getInput(void)
 	                           par().qCRight,
 	                           par().qInt1,
 	                           par().qInt2};
-
     return in;
 }
 
