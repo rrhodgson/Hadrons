@@ -84,7 +84,7 @@ public:
                                         std::string,    parity,
 					std::string,    eta_max);
     };
-    typedef Correlator<Metadata, std::vector<ComplexD>> Result;
+    typedef Correlator<Metadata, std::vector<Complex>> Result;
 public:
     // constructor
     TDMixingTopD(const std::string name);
@@ -99,9 +99,9 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<SpinColourMatrixD> contract_D_half(const LatticeSpinColourMatrixD& prop_c, const LatticeSpinColourMatrixD& prop_u, const LatticeSpinColourMatrixD& loop);
-    virtual std::vector<std::vector<ComplexD>> contract_D(const std::vector<SpinColourMatrixD>& half_if, const std::vector<SpinColourMatrixD>& half_fi);
-    virtual std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> GH_VVAA_cap(const LatticeSpinColourMatrixD& prop);
+    virtual std::vector<SpinColourMatrix> contract_D_half(const LatticePropagator& prop_c, const LatticePropagator& prop_u, const LatticePropagator& loop);
+    virtual std::vector<std::vector<Complex>> contract_D(const std::vector<SpinColourMatrix>& half_if, const std::vector<SpinColourMatrix>& half_fi);
+    virtual std::pair<LatticePropagator,LatticePropagator> GH_VVAA_cap(const LatticePropagator& prop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -149,7 +149,7 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<SpinColourMatrixD> TDMixingTopD<FImpl>::contract_D_half(const LatticeSpinColourMatrixD& prop_c, const LatticeSpinColourMatrixD& prop_u, const LatticeSpinColourMatrixD& loop) {
+std::vector<SpinColourMatrix> TDMixingTopD<FImpl>::contract_D_half(const LatticePropagator& prop_c, const LatticePropagator& prop_u, const LatticePropagator& loop) {
 	Gamma G5(Gamma::Algebra::Gamma5);
 
 	LatticePropagator tmp = G5*adj(prop_u)*G5 * loop * prop_c;
@@ -159,7 +159,7 @@ std::vector<SpinColourMatrixD> TDMixingTopD<FImpl>::contract_D_half(const Lattic
 };
 
 template <typename FImpl>
-std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::vector<SpinColourMatrixD>& half_if, const std::vector<SpinColourMatrixD>& half_fi) {
+std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const std::vector<SpinColourMatrix>& half_if, const std::vector<SpinColourMatrix>& half_fi) {
 	Gamma G5(Gamma::Algebra::Gamma5);
 	Gamma GT(Gamma::Algebra::GammaT);
 
@@ -169,7 +169,7 @@ std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::ve
 
 	int Nt = half_if.size();
 
-	std::vector<std::vector<ComplexD>> corr(Nt,std::vector<ComplexD>(Nt,0.));
+	std::vector<std::vector<Complex>> corr(Nt,std::vector<Complex>(Nt,0.));
 	for (int t1=0; t1<Nt; t1++)
 	{
 	    for (int t2=0; t2<Nt; t2++)
@@ -182,7 +182,7 @@ std::vector<std::vector<ComplexD>> TDMixingTopD<FImpl>::contract_D(const std::ve
 };
 
 template <typename FImpl>
-std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>::GH_VVAA_cap(const LatticeSpinColourMatrixD& prop) {
+std::pair<LatticePropagator,LatticePropagator> TDMixingTopD<FImpl>::GH_VVAA_cap(const LatticePropagator& prop) {
 	GridBase* grid = prop.Grid();
 
 	std::array<Gamma,8> GHs{Gamma(Gamma::Algebra::GammaX),
@@ -194,7 +194,7 @@ std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>
 	              	Gamma(Gamma::Algebra::GammaZGamma5),
 	              	Gamma(Gamma::Algebra::GammaTGamma5)};
 
-	SpinColourMatrixD spId = Zero();
+	SpinColourMatrix spId = Zero();
 	for (int s=0; s<4; s++)
 	{
 	    for (int c=0; c<3; c++)
@@ -203,8 +203,8 @@ std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>
 	    }
 	}
 
-        LatticeSpinColourMatrixD GTrPropG_VVAA(grid); GTrPropG_VVAA = Zero();
-	LatticeSpinColourMatrixD GPropG_VVAA(grid)  ; GPropG_VVAA   = Zero();
+        LatticePropagator GTrPropG_VVAA(grid); GTrPropG_VVAA = Zero();
+	LatticePropagator GPropG_VVAA(grid)  ; GPropG_VVAA   = Zero();
 	for (int g=0; g<GHs.size(); g++) 
 	{
 		Gamma GH = GHs[g];
@@ -218,7 +218,8 @@ std::pair<LatticeSpinColourMatrixD,LatticeSpinColourMatrixD> TDMixingTopD<FImpl>
 template <typename FImpl>
 void TDMixingTopD<FImpl>::setup(void)
 {
-    envTmpLat(ComplexField, "corr");
+   
+    /*	envTmpLat(ComplexField, "corr");
     envTmpLat(PropagatorField, "parPlusR1L1");
     envTmpLat(PropagatorField, "parPlusR2L1");
     envTmpLat(PropagatorField, "parMinusR1L1");
@@ -228,7 +229,11 @@ void TDMixingTopD<FImpl>::setup(void)
     envTmpLat(PropagatorField, "parMinusR1L2");
     envTmpLat(PropagatorField, "parMinusR2L2");
     envCreate(HadronsSerializable, getName(), 1, 0);
+    */
 
+    GridCartesian * grid = envGetGrid(FermionField);
+    envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));  
+  	
     if (par().qLoop1 != par().qLoop2)
     {
         HADRONS_ERROR(Argument, "Current implementation for identical loops only");
@@ -264,14 +269,15 @@ void TDMixingTopD<FImpl>::execute(void)
 
     int Neta = ql1.size();
 
-    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_lr(Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(Nt)));
-    std::vector<std::vector<std::vector<SpinColourMatrixD>>> half_rl(Neta, std::vector<std::vector<SpinColourMatrixD>>(2, std::vector<SpinColourMatrixD>(Nt)));
+    std::vector<std::vector<std::vector<SpinColourMatrix>>> half_lr(Neta, std::vector<std::vector<SpinColourMatrix>>(2, std::vector<SpinColourMatrix>(Nt)));
+    std::vector<std::vector<std::vector<SpinColourMatrix>>> half_rl(Neta, std::vector<std::vector<SpinColourMatrix>>(2, std::vector<SpinColourMatrix>(Nt)));
 
 
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity),Gamma(Gamma::Algebra::Gamma5)};
-    std::vector<LatticeSpinColourMatrixD> GdsG_pp(2, grid);
+    envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
+    //std::vector<LatticePropagator> GdsG_pp(2, grid);
     for (int p = 0; p < 2; p++) 
     {
         for (int i=0; i<Neta; i++) 
@@ -282,8 +288,8 @@ void TDMixingTopD<FImpl>::execute(void)
             GdsG_pp[1] = tmp.second; // r2 
             for (int r = 0; r < 2; r++) 
 	    {
-	        half_lr[i][r] = contract_D_half(qcl, qur, GdsG_pp[i + Neta * r] * parityG[p]);
-	        half_rl[i][r] = contract_D_half(qcr, qul, GdsG_pp[i + Neta * r] * parityG[p]);
+	        half_lr[i][r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
+	        half_rl[i][r] = contract_D_half(qcr, qul, GdsG_pp[r] * parityG[p]);
 	    }
 	}
     
@@ -293,7 +299,7 @@ void TDMixingTopD<FImpl>::execute(void)
 	    {
                 res.info.rr = std::to_string(r+1) + std::to_string(s+1);
                 res.info.parity = (p == 0) ? "+" : "-";
-		std::vector<std::vector<std::vector<std::vector<ComplexD>>>> buf(Neta, std::vector<std::vector<std::vector<ComplexD>>>(Neta, std::vector<std::vector<ComplexD>>(Nt, std::vector<ComplexD>(Nt))));
+		std::vector<std::vector<std::vector<std::vector<Complex>>>> buf(Neta, std::vector<std::vector<std::vector<Complex>>>(Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt))));
 		for (int i=0; i<Neta; i++) 
 		{
 		    for (int j=0; j<Neta; j++) 
@@ -305,7 +311,7 @@ void TDMixingTopD<FImpl>::execute(void)
 		// Average noises up to imax (+ remove diagonal terms)
 		for (int imax=1; imax<=Neta; imax++) 
 		{
-		    std::vector<std::vector<ComplexD>> tmp = std::vector<std::vector<ComplexD>>(Nt,std::vector<ComplexD>(Nt,0.));
+		    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt,std::vector<Complex>(Nt,0.));
 		    for (int i=0; i<imax; i++) {
 		        for (int j=0; j<imax; j++) {
 			    // this is assuming both loops have same noises	
