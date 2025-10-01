@@ -299,42 +299,35 @@ void TDMixingTopD<FImpl>::execute(void)
 	    {
                 res.info.rr = std::to_string(r+1) + std::to_string(s+1);
                 res.info.parity = (p == 0) ? "+" : "-";
-		std::vector<std::vector<std::vector<std::vector<Complex>>>> buf(Neta, std::vector<std::vector<std::vector<Complex>>>(Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt))));
+		//std::vector<std::vector<std::vector<std::vector<Complex>>>> buf(Neta, std::vector<std::vector<std::vector<Complex>>>(Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt))));
+                std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
 		for (int i=0; i<Neta; i++) 
 		{
 		    for (int j=0; j<Neta; j++) 
 		    {
-			buf[i][j] = contract_D(half_lr[i][r], half_rl[j][s]);
+			buf[i + Neta * j] = contract_D(half_lr[i][r], half_rl[j][s]);
 		    }
 		}
 
 		// Average noises up to imax (+ remove diagonal terms)
 		for (int imax=1; imax<=Neta; imax++) 
 		{
+	            bool same_loop_noise = true;	
+		    const double norm = (imax > 1) ? 1.0 / (imax * (imax - 1)) : 1.0;
+		    if(!same_loop_noise) norm = 1.0 / (imax * imax);
 		    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt,std::vector<Complex>(Nt,0.));
 		    for (int i=0; i<imax; i++) {
 		        for (int j=0; j<imax; j++) {
-			    // this is assuming both loops have same noises	
-			    if (i != j) {
-			        const auto& c = buf[i][j];
-				for (int t1=0; t1<Nt; t1++) 
-				{
-				    for (int t2=0; t2<Nt; t2++) 
-				    {
-				        tmp[t1][t2] += c[t1][t2];
-				    }
-				}
-			    }
-			}
-		    }
-		    if (imax > 1) 
-		    {
-		        for (int t1=0; t1<Nt; t1++) 
-			{
-			    for (int t2=0; t2<Nt; t2++) 
-			    {
-			        tmp[t1][t2] /= imax*(imax-1); 
-			    }
+			    // TODO generalize to set this manually
+			    if (i == j and same_loop_noise) continue;
+                            const auto& c = buf[i + Neta * j];
+                            for (int t1=0; t1<Nt; t1++) 
+                            {
+                                for (int t2=0; t2<Nt; t2++) 
+                                {
+                                    tmp[t1][t2] += c[t1][t2] * norm;
+                                }
+                            }
 			}
 		    }
 		    res.info.eta_max = std::to_string(imax);
