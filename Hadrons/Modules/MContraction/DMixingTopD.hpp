@@ -99,9 +99,9 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<SpinColourMatrix> contract_D_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop);
-    virtual std::vector<std::vector<Complex>> contract_D(const std::vector<SpinColourMatrix> &half_if, const std::vector<SpinColourMatrix> &half_fi);
-    virtual std::pair<LatticePropagator, LatticePropagator> GH_VVAA_cap(const LatticePropagator &prop);
+    virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
+    virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
+    virtual std::pair<PropagatorField, PropagatorField> GH_VVAA_cap(const PropagatorField &prop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -150,18 +150,18 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<SpinColourMatrix> TDMixingTopD<FImpl>::contract_D_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop)
+typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(const TDMixingTopD<FImpl>::PropagatorField &prop_c, const TDMixingTopD<FImpl>::PropagatorField &prop_u, const TDMixingTopD<FImpl>::PropagatorField &loop)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
 
-    LatticePropagator tmp = G5 * adj(prop_u) * G5 * loop * prop_c;
-    std::vector<LatticePropagator::scalar_object> ret;
+    PropagatorField tmp = G5 * adj(prop_u) * G5 * loop * prop_c;
+    SlicedPropagator ret;
     sliceSum(tmp, ret, Tp);
     return ret;
 };
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const std::vector<SpinColourMatrix> &half_if, const std::vector<SpinColourMatrix> &half_fi)
+std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_if, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_fi)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
     Gamma GT(Gamma::Algebra::GammaT);
@@ -185,7 +185,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const std::vec
 };
 
 template <typename FImpl>
-std::pair<LatticePropagator, LatticePropagator> TDMixingTopD<FImpl>::GH_VVAA_cap(const LatticePropagator &prop)
+std::pair<typename TDMixingTopD<FImpl>::PropagatorField, typename TDMixingTopD<FImpl>::PropagatorField> TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop)
 {
     GridBase *grid = prop.Grid();
 
@@ -198,7 +198,7 @@ std::pair<LatticePropagator, LatticePropagator> TDMixingTopD<FImpl>::GH_VVAA_cap
                              Gamma(Gamma::Algebra::GammaZGamma5),
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
-    SpinColourMatrix spId = Zero();
+    SitePropagator spId = Zero();
     for (int s = 0; s < 4; s++)
     {
         for (int c = 0; c < 3; c++)
@@ -207,9 +207,9 @@ std::pair<LatticePropagator, LatticePropagator> TDMixingTopD<FImpl>::GH_VVAA_cap
         }
     }
 
-    LatticePropagator GTrPropG_VVAA(grid);
+    PropagatorField GTrPropG_VVAA(grid);
     GTrPropG_VVAA = Zero();
-    LatticePropagator GPropG_VVAA(grid);
+    PropagatorField GPropG_VVAA(grid);
     GPropG_VVAA = Zero();
     for (int g = 0; g < GHs.size(); g++)
     {
@@ -226,12 +226,12 @@ void TDMixingTopD<FImpl>::setup(void)
 {
 
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
     int Neta = ql1.size();
     const int Nt{env().getDim(Tdir)};
-    envTmp(std::vector<std::vector<SpinColourMatrix>>, "half_lr", 1, 2 * Neta, std::vector<SpinColourMatrix>(Nt));
-    envTmp(std::vector<std::vector<SpinColourMatrix>>, "half_rl", 1, 2 * Neta, std::vector<SpinColourMatrix>(Nt));
+    envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
+    envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
     envTmp(std::vector<std::vector<std::vector<Complex>>>, "buf", 1, Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
 
     if (par().qLoop1 != par().qLoop2)
@@ -270,14 +270,14 @@ void TDMixingTopD<FImpl>::execute(void)
     int Neta = ql1.size();
     bool same_loop_noise = true;
 
-    // std::vector<std::vector<SpinColourMatrix>> half_lr(2 * Neta, std::vector<SpinColourMatrix>(Nt));
-    // std::vector<std::vector<SpinColourMatrix>> half_rl(2 * Neta, std::vector<SpinColourMatrix>(Nt));
-    envGetTmp(std::vector<std::vector<SpinColourMatrix>>, half_lr);
-    envGetTmp(std::vector<std::vector<SpinColourMatrix>>, half_rl);
+    // std::vector<SlicedPropagator> half_lr(2 * Neta, SlicedPropagator(Nt));
+    // std::vector<SlicedPropagator> half_rl(2 * Neta, SlicedPropagator(Nt));
+    envGetTmp(std::vector<SlicedPropagator>, half_lr);
+    envGetTmp(std::vector<SlicedPropagator>, half_rl);
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
+    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
     // std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
     envGetTmp(std::vector<std::vector<std::vector<Complex>>>, buf);
     std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
