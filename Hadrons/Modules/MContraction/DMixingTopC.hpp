@@ -63,10 +63,10 @@ public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(DMixingTopCPar,
                                     std::string,    qULeft,
                                     std::string,    qCLeft,
-                                    std::string,    qURight,
-                                    std::string,    qCRight,
+                                    //std::string,    qURight,
+                                    //std::string,    qCRight,
                                     std::string,    qLoop1,
-                                    std::string,    qLoop2,
+                                    //std::string,    qLoop2,
                                     std::string,    output);
 };
 
@@ -75,6 +75,14 @@ class TDMixingTopC: public Module<DMixingTopCPar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
+    class Metadata : Serializable
+    {
+    public:
+        GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
+                                        std::string, r,
+                                        std::string, parity);
+    };
+    typedef Correlator<Metadata, Complex> Result;
 public:
     // constructor
     TDMixingTopC(const std::string name);
@@ -88,6 +96,9 @@ public:
     virtual void setup(void);
     // execution
     virtual void execute(void);
+    // bespoke subcontractions
+    virtual std::vector<Complex> contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop);
+    virtual std::pair<LatticePropagator, LatticePropagator> GH_VVAA_cap(const LatticePropagator &prop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -107,10 +118,10 @@ std::vector<std::string> TDMixingTopC<FImpl>::getInput(void)
 {
     std::vector<std::string> in = {par().qULeft, 
 	                           par().qCLeft,
-	                           par().qURight,
-	                           par().qCRight,
-	                           par().qLoop1,
-	                           par().qLoop2};
+	                           //par().qURight,
+	                           //par().qCRight,
+	                           par().qLoop1};//,
+	                           //par().qLoop2};
 
     return in;
 }
@@ -134,10 +145,67 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
     return output;
 }
 
+template <typename FImpl>
+std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop)
+{
+    Gamma G5(Gamma::Algebra::Gamma5);
+    Gamma GT(Gamma::Algebra::GammaT);
+
+    Gamma Gsrc = G5;
+
+    LatticeComplex tmp = trace( prop_c * Gsrc * G5*adj(prop_u)*G5 * loop );
+    std::vector<LatticeComplex::scalar_object> ret;
+    sliceSum(tmp, ret, Tp);
+    std::vector<Complex> ret2;
+    for (unsigned int t = 0; t < env().getDim(Tdir); ++t)
+    {
+        ret2[t] = TensorRemove(ret[t]);
+    }
+    return ret2;
+};
+
+template <typename FImpl>
+std::pair<LatticePropagator, LatticePropagator> TDMixingTopC<FImpl>::GH_VVAA_cap(const LatticePropagator &prop)
+{
+    GridBase *grid = prop.Grid();
+
+    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
+                             Gamma(Gamma::Algebra::GammaY),
+                             Gamma(Gamma::Algebra::GammaZ),
+                             Gamma(Gamma::Algebra::GammaT),
+                             Gamma(Gamma::Algebra::GammaXGamma5),
+                             Gamma(Gamma::Algebra::GammaYGamma5),
+                             Gamma(Gamma::Algebra::GammaZGamma5),
+                             Gamma(Gamma::Algebra::GammaTGamma5)};
+
+    SpinColourMatrix spId = Zero();
+    for (int s = 0; s < 4; s++)
+    {
+        for (int c = 0; c < 3; c++)
+        {
+            spId()(s, s)(c, c) = 1.;
+        }
+    }
+
+    LatticePropagator GTrPropG_VVAA(grid);
+    GTrPropG_VVAA = Zero();
+    LatticePropagator GPropG_VVAA(grid);
+    GPropG_VVAA = Zero();
+    for (int g = 0; g < GHs.size(); g++)
+    {
+        Gamma GH = GHs[g];
+        GTrPropG_VVAA += spId * GH * trace(prop * GH);
+        GPropG_VVAA += GH * prop * GH;
+    }
+    return std::make_pair(GTrPropG_VVAA, GPropG_VVAA);
+};
+
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
 void TDMixingTopC<FImpl>::setup(void)
 {
+    GridCartesian *grid = envGetGrid(FermionField);
+    envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));   
     envTmpLat(ComplexField, "corr");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -146,6 +214,47 @@ void TDMixingTopC<FImpl>::setup(void)
 template <typename FImpl>
 void TDMixingTopC<FImpl>::execute(void)
 {
+    LOG(Message) << "Computing D-meson mixing diagram, topology C" << std::endl;
+    LOG(Message) << "qULeft  : " << par().qULeft << std::endl;
+    LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
+    LOG(Message) << "qLoop1  : " << par().qLoop1 << std::endl;
+
+    std::vector<Result> result;
+    Result res;
+
+    const int Nt{env().getDim(Tdir)};
+    GridCartesian *grid = envGetGrid(FermionField);
+
+    auto &qul = envGet(PropagatorField, par().qULeft);
+    auto &qcl = envGet(PropagatorField, par().qCLeft);
+    auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
+
+    int Neta = ql1.size();
+
+    // parity +, parity -
+    std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
+    std::vector<Complex> buf(Nt);
+    for (int p = 0; p < 2; p++)
+    {
+        res.info.parity = (p == 0) ? "+" : "-";
+        for (int i = 0; i < Neta; i++)
+        {
+            // here one has to add ql2 if one wants them to be allowed to be different
+            auto tmp = GH_VVAA_cap(*ql1[i]);
+            GdsG_pp[0] = tmp.first;  // r1
+            GdsG_pp[1] = tmp.second; // r2
+            for (int r = 0; r < 2; r++)
+            {
+                res.info.r = std::to_string(r+1);
+                buf = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
+		res.corr.clear();
+                res.corr = buf;
+                result.push_back(res);
+            }
+        }
+    }
+
 
 }
 
