@@ -101,7 +101,7 @@ public:
     // bespoke subcontractions
     virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
     virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
-    virtual std::pair<PropagatorField, PropagatorField> GH_VVAA_cap(const PropagatorField &prop);
+    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -185,9 +185,11 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename
 };
 
 template <typename FImpl>
-std::pair<typename TDMixingTopD<FImpl>::PropagatorField, typename TDMixingTopD<FImpl>::PropagatorField> TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop)
+typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
 {
-    GridBase *grid = prop.Grid();
+    assert(r==1 or r==2);
+
+    GridBase *grid = envGetGrid(FermionField);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
                              Gamma(Gamma::Algebra::GammaY),
@@ -198,26 +200,23 @@ std::pair<typename TDMixingTopD<FImpl>::PropagatorField, typename TDMixingTopD<F
                              Gamma(Gamma::Algebra::GammaZGamma5),
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
-    SitePropagator spId = Zero();
-    for (int s = 0; s < 4; s++)
-    {
-        for (int c = 0; c < 3; c++)
-        {
-            spId()(s, s)(c, c) = 1.;
-        }
-    }
+    SitePropagator spId(1.0);
 
-    PropagatorField GTrPropG_VVAA(grid);
-    GTrPropG_VVAA = Zero();
     PropagatorField GPropG_VVAA(grid);
     GPropG_VVAA = Zero();
     for (int g = 0; g < GHs.size(); g++)
     {
         Gamma GH = GHs[g];
-        GTrPropG_VVAA += spId * GH * trace(prop * GH);
-        GPropG_VVAA += GH * prop * GH;
+        if (r == 1)
+        {
+            GPropG_VVAA += spId * GH * trace(prop * GH);
+        }
+        else
+        {
+            GPropG_VVAA += GH * prop * GH;
+        }
     }
-    return std::make_pair(GTrPropG_VVAA, GPropG_VVAA);
+    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -286,9 +285,8 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            auto tmp = GH_VVAA_cap(*ql1[i]);
-            GdsG_pp[0] = tmp.first;  // r1
-            GdsG_pp[1] = tmp.second; // r2
+            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1); // r1
+            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
