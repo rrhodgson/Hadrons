@@ -238,6 +238,7 @@ void TDMixingTopD<FImpl>::setup(void)
     {
         HADRONS_ERROR(Argument, "Current implementation for identical loops only");
     }
+    envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
