@@ -219,26 +219,19 @@ template <typename FImpl>
 void TDMixingTopD<FImpl>::setup(void)
 {
    
-    /*	envTmpLat(ComplexField, "corr");
-    envTmpLat(PropagatorField, "parPlusR1L1");
-    envTmpLat(PropagatorField, "parPlusR2L1");
-    envTmpLat(PropagatorField, "parMinusR1L1");
-    envTmpLat(PropagatorField, "parMinusR2L1");
-    envTmpLat(PropagatorField, "parPlusR1L2");
-    envTmpLat(PropagatorField, "parPlusR2L2");
-    envTmpLat(PropagatorField, "parMinusR1L2");
-    envTmpLat(PropagatorField, "parMinusR2L2");
-    envCreate(HadronsSerializable, getName(), 1, 0);
-    */
-
     GridCartesian * grid = envGetGrid(FermionField);
     envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));  
+    auto      &ql1  = envGet(std::vector<PropagatorField*>, par().qLoop1);
+    int       Neta = ql1.size();
+    const int Nt{env().getDim(Tdir)};
+    envTmp(std::vector<std::vector<SpinColourMatrix>>, "half_lr", 1, 2 * Neta, std::vector<SpinColourMatrix>(Nt));
+    envTmp(std::vector<std::vector<SpinColourMatrix>>, "half_rl", 1, 2 * Neta, std::vector<SpinColourMatrix>(Nt));
+    envTmp(std::vector<std::vector<std::vector<Complex>>>, "buf", 1, Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
   	
     if (par().qLoop1 != par().qLoop2)
     {
         HADRONS_ERROR(Argument, "Current implementation for identical loops only");
     }
-
 
 }
 
@@ -267,17 +260,24 @@ void TDMixingTopD<FImpl>::execute(void)
     auto                &ql1  = envGet(std::vector<PropagatorField*>, par().qLoop1);
     auto                &ql2  = envGet(std::vector<PropagatorField*>, par().qLoop2);
 
+    // this is assuming both loops are identical
     int Neta = ql1.size();
+    bool same_loop_noise = true;	
 
-    std::vector<std::vector<std::vector<SpinColourMatrix>>> half_lr(Neta, std::vector<std::vector<SpinColourMatrix>>(2, std::vector<SpinColourMatrix>(Nt)));
-    std::vector<std::vector<std::vector<SpinColourMatrix>>> half_rl(Neta, std::vector<std::vector<SpinColourMatrix>>(2, std::vector<SpinColourMatrix>(Nt)));
+
+    //std::vector<std::vector<SpinColourMatrix>> half_lr(2 * Neta, std::vector<SpinColourMatrix>(Nt));
+    //std::vector<std::vector<SpinColourMatrix>> half_rl(2 * Neta, std::vector<SpinColourMatrix>(Nt));
+    envGetTmp(std::vector<std::vector<SpinColourMatrix>>, half_lr);
+    envGetTmp(std::vector<std::vector<SpinColourMatrix>>, half_rl);
 
 
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity),Gamma(Gamma::Algebra::Gamma5)};
     envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
-    //std::vector<LatticePropagator> GdsG_pp(2, grid);
+    //std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
+    envGetTmp(std::vector<std::vector<std::vector<Complex>>>, buf);
+    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt,std::vector<Complex>(Nt,0.));
     for (int p = 0; p < 2; p++) 
     {
         for (int i=0; i<Neta; i++) 
@@ -288,8 +288,8 @@ void TDMixingTopD<FImpl>::execute(void)
             GdsG_pp[1] = tmp.second; // r2 
             for (int r = 0; r < 2; r++) 
 	    {
-	        half_lr[i][r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
-	        half_rl[i][r] = contract_D_half(qcr, qul, GdsG_pp[r] * parityG[p]);
+	        half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
+	        half_rl[i + Neta * r] = contract_D_half(qcr, qul, GdsG_pp[r] * parityG[p]);
 	    }
 	}
     
@@ -299,31 +299,28 @@ void TDMixingTopD<FImpl>::execute(void)
 	    {
                 res.info.rr = std::to_string(r+1) + std::to_string(s+1);
                 res.info.parity = (p == 0) ? "+" : "-";
-		//std::vector<std::vector<std::vector<std::vector<Complex>>>> buf(Neta, std::vector<std::vector<std::vector<Complex>>>(Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt))));
-                std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
 		for (int i=0; i<Neta; i++) 
 		{
 		    for (int j=0; j<Neta; j++) 
 		    {
-			buf[i + Neta * j] = contract_D(half_lr[i][r], half_rl[j][s]);
+			buf[j + Neta * i] = contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
 		    }
 		}
 
 		// Average noises up to imax (+ remove diagonal terms)
 		for (int imax=1; imax<=Neta; imax++) 
 		{
-	            bool same_loop_noise = true;	
-		    const double norm = (imax > 1) ? 1.0 / (imax * (imax - 1)) : 1.0;
-		    if(!same_loop_noise) norm = 1.0 / (imax * imax);
-		    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt,std::vector<Complex>(Nt,0.));
+                    for (int t0 = 0; t0 < Nt; t0++) {
+                        std::fill(tmp[t0].begin(), tmp[t0].end(), 0.0);
+                    }
+    		    const double norm = (!same_loop_noise) ? 1.0 / (imax * imax) : (imax > 1 ? 1.0 / (imax * (imax - 1)) : 1.0);
 		    for (int i=0; i<imax; i++) {
 		        for (int j=0; j<imax; j++) {
-			    // TODO generalize to set this manually
 			    if (i == j and same_loop_noise) continue;
-                            const auto& c = buf[i + Neta * j];
-                            for (int t1=0; t1<Nt; t1++) 
+                            const auto& c = buf[j + Neta * i];
+                            for (int t1 = 0; t1 < Nt; t1++) 
                             {
-                                for (int t2=0; t2<Nt; t2++) 
+                                for (int t2 = 0; t2 < Nt; t2++) 
                                 {
                                     tmp[t1][t2] += c[t1][t2] * norm;
                                 }
