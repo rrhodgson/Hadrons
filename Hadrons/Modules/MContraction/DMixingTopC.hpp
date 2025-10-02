@@ -157,7 +157,7 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagato
     LatticeComplex tmp = trace( prop_c * Gsrc * G5*adj(prop_u)*G5 * loop );
     std::vector<LatticeComplex::scalar_object> ret;
     sliceSum(tmp, ret, Tp);
-    std::vector<Complex> ret2;
+    std::vector<Complex> ret2(ret.size());
     for (unsigned int t = 0; t < env().getDim(Tdir); ++t)
     {
         ret2[t] = TensorRemove(ret[t]);
