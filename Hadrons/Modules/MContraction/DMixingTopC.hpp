@@ -117,11 +117,11 @@ template <typename FImpl>
 std::vector<std::string> TDMixingTopC<FImpl>::getInput(void)
 {
     std::vector<std::string> in = {par().qULeft, 
-	                           par().qCLeft,
-	                           //par().qURight,
-	                           //par().qCRight,
-	                           par().qLoop1};//,
-	                           //par().qLoop2};
+                               par().qCLeft,
+                               //par().qURight,
+                               //par().qCRight,
+                               par().qLoop1};//,
+                               //par().qLoop2};
 
     return in;
 }
@@ -248,7 +248,7 @@ void TDMixingTopC<FImpl>::execute(void)
             {
                 res.info.r = std::to_string(r+1);
                 buf = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
-		res.corr.clear();
+                res.corr.clear();
                 res.corr = buf;
                 result.push_back(res);
             }
