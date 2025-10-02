@@ -166,7 +166,7 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FIm
 };
 
 template <typename FImpl>
-typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
+typename TDMixingTopC<FImpl>::PropagatorField TDMixingTopC<FImpl>::GH_VVAA_cap(const TDMixingTopC<FImpl>::PropagatorField &prop, int r)
 {
     assert(r==1 or r==2);
 
@@ -241,9 +241,8 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            auto tmp = GH_VVAA_cap(*ql1[i]);
-            GdsG_pp[0] = tmp.first;  // r1
-            GdsG_pp[1] = tmp.second; // r2
+            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1);  // r1
+            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r+1);
