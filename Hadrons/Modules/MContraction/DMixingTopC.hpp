@@ -99,7 +99,7 @@ public:
     virtual void execute(void);
     // bespoke subcontractions
     virtual std::vector<Complex> contract_C_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
-    virtual std::pair<PropagatorField, PropagatorField> GH_VVAA_cap(const PropagatorField &prop);
+    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -166,9 +166,11 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FIm
 };
 
 template <typename FImpl>
-std::pair<typename TDMixingTopC<FImpl>::PropagatorField, typename TDMixingTopC<FImpl>::PropagatorField> TDMixingTopC<FImpl>::GH_VVAA_cap(const TDMixingTopC<FImpl>::PropagatorField &prop)
+typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
 {
-    GridBase *grid = prop.Grid();
+    assert(r==1 or r==2);
+
+    GridBase *grid = envGetGrid(FermionField);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
                              Gamma(Gamma::Algebra::GammaY),
@@ -179,26 +181,23 @@ std::pair<typename TDMixingTopC<FImpl>::PropagatorField, typename TDMixingTopC<F
                              Gamma(Gamma::Algebra::GammaZGamma5),
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
-    SpinColourMatrix spId = Zero();
-    for (int s = 0; s < 4; s++)
-    {
-        for (int c = 0; c < 3; c++)
-        {
-            spId()(s, s)(c, c) = 1.;
-        }
-    }
+    SitePropagator spId(1.0);
 
-    PropagatorField GTrPropG_VVAA(grid);
-    GTrPropG_VVAA = Zero();
     PropagatorField GPropG_VVAA(grid);
     GPropG_VVAA = Zero();
     for (int g = 0; g < GHs.size(); g++)
     {
         Gamma GH = GHs[g];
-        GTrPropG_VVAA += spId * GH * trace(prop * GH);
-        GPropG_VVAA += GH * prop * GH;
+        if (r == 1)
+        {
+            GPropG_VVAA += spId * GH * trace(prop * GH);
+        }
+        else
+        {
+            GPropG_VVAA += GH * prop * GH;
+        }
     }
-    return std::make_pair(GTrPropG_VVAA, GPropG_VVAA);
+    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
