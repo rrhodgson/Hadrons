@@ -4,8 +4,7 @@
  * Copyright (C) 2015 - 2023
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
- * Author: Lanny91 <andrew.lawson@gmail.com>
- * Author: Peter Boyle <paboyle@ph.ed.ac.uk>
+ * Author: Raoul Hodgson <raoul.hodgson@desy.de>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
