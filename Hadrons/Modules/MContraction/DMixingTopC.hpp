@@ -98,8 +98,8 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<Complex> contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop);
-    virtual std::pair<LatticePropagator, LatticePropagator> GH_VVAA_cap(const LatticePropagator &prop);
+    virtual std::vector<Complex> contract_C_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
+    virtual std::pair<PropagatorField, PropagatorField> GH_VVAA_cap(const PropagatorField &prop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -147,7 +147,7 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop)
+std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FImpl>::PropagatorField &prop_c, const TDMixingTopC<FImpl>::PropagatorField &prop_u, const TDMixingTopC<FImpl>::PropagatorField &loop)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
     Gamma GT(Gamma::Algebra::GammaT);
@@ -155,7 +155,7 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagato
     Gamma Gsrc = G5;
 
     LatticeComplex tmp = trace( prop_c * Gsrc * G5*adj(prop_u)*G5 * loop );
-    std::vector<LatticeComplex::scalar_object> ret;
+    SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
     std::vector<Complex> ret2(ret.size());
     for (unsigned int t = 0; t < env().getDim(Tdir); ++t)
@@ -166,7 +166,7 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagato
 };
 
 template <typename FImpl>
-std::pair<LatticePropagator, LatticePropagator> TDMixingTopC<FImpl>::GH_VVAA_cap(const LatticePropagator &prop)
+std::pair<typename TDMixingTopC<FImpl>::PropagatorField, typename TDMixingTopC<FImpl>::PropagatorField> TDMixingTopC<FImpl>::GH_VVAA_cap(const TDMixingTopC<FImpl>::PropagatorField &prop)
 {
     GridBase *grid = prop.Grid();
 
@@ -188,9 +188,9 @@ std::pair<LatticePropagator, LatticePropagator> TDMixingTopC<FImpl>::GH_VVAA_cap
         }
     }
 
-    LatticePropagator GTrPropG_VVAA(grid);
+    PropagatorField GTrPropG_VVAA(grid);
     GTrPropG_VVAA = Zero();
-    LatticePropagator GPropG_VVAA(grid);
+    PropagatorField GPropG_VVAA(grid);
     GPropG_VVAA = Zero();
     for (int g = 0; g < GHs.size(); g++)
     {
@@ -206,7 +206,7 @@ template <typename FImpl>
 void TDMixingTopC<FImpl>::setup(void)
 {
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));   
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));   
     envTmpLat(ComplexField, "corr");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -234,7 +234,7 @@ void TDMixingTopC<FImpl>::execute(void)
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
+    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
     std::vector<Complex> buf(Nt);
     for (int p = 0; p < 2; p++)
     {
