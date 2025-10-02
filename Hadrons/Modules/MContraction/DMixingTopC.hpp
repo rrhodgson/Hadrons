@@ -248,7 +248,7 @@ void TDMixingTopC<FImpl>::execute(void)
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r+1);
-                res.info.eta = i;
+                res.info.eta = std::to_string(i);
                 buf = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
                 res.corr.clear();
                 res.corr = buf;
@@ -257,7 +257,10 @@ void TDMixingTopC<FImpl>::execute(void)
         }
     }
 
-
+    // save result, and hand it to environment
+    saveResult(par().output, "DMixingTopC", result);
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
 }
 
 
