@@ -80,7 +80,8 @@ public:
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
                                         std::string, r,
-                                        std::string, parity);
+                                        std::string, parity,
+                                        std::string, eta);
     };
     typedef Correlator<Metadata, Complex> Result;
 public:
@@ -97,8 +98,8 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<Complex> contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop);
-    virtual std::pair<LatticePropagator, LatticePropagator> GH_VVAA_cap(const LatticePropagator &prop);
+    virtual std::vector<Complex> contract_C_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
+    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -117,11 +118,11 @@ template <typename FImpl>
 std::vector<std::string> TDMixingTopC<FImpl>::getInput(void)
 {
     std::vector<std::string> in = {par().qULeft, 
-	                           par().qCLeft,
-	                           //par().qURight,
-	                           //par().qCRight,
-	                           par().qLoop1};//,
-	                           //par().qLoop2};
+                               par().qCLeft,
+                               //par().qURight,
+                               //par().qCRight,
+                               par().qLoop1};//,
+                               //par().qLoop2};
 
     return in;
 }
@@ -146,7 +147,7 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagator &prop_c, const LatticePropagator &prop_u, const LatticePropagator &loop)
+std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FImpl>::PropagatorField &prop_c, const TDMixingTopC<FImpl>::PropagatorField &prop_u, const TDMixingTopC<FImpl>::PropagatorField &loop)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
     Gamma GT(Gamma::Algebra::GammaT);
@@ -154,9 +155,9 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagato
     Gamma Gsrc = G5;
 
     LatticeComplex tmp = trace( prop_c * Gsrc * G5*adj(prop_u)*G5 * loop );
-    std::vector<LatticeComplex::scalar_object> ret;
+    SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
-    std::vector<Complex> ret2;
+    std::vector<Complex> ret2(ret.size());
     for (unsigned int t = 0; t < env().getDim(Tdir); ++t)
     {
         ret2[t] = TensorRemove(ret[t]);
@@ -165,9 +166,11 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const LatticePropagato
 };
 
 template <typename FImpl>
-std::pair<LatticePropagator, LatticePropagator> TDMixingTopC<FImpl>::GH_VVAA_cap(const LatticePropagator &prop)
+typename TDMixingTopC<FImpl>::PropagatorField TDMixingTopC<FImpl>::GH_VVAA_cap(const TDMixingTopC<FImpl>::PropagatorField &prop, int r)
 {
-    GridBase *grid = prop.Grid();
+    assert(r==1 or r==2);
+
+    GridBase *grid = envGetGrid(FermionField);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
                              Gamma(Gamma::Algebra::GammaY),
@@ -178,26 +181,23 @@ std::pair<LatticePropagator, LatticePropagator> TDMixingTopC<FImpl>::GH_VVAA_cap
                              Gamma(Gamma::Algebra::GammaZGamma5),
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
-    SpinColourMatrix spId = Zero();
-    for (int s = 0; s < 4; s++)
-    {
-        for (int c = 0; c < 3; c++)
-        {
-            spId()(s, s)(c, c) = 1.;
-        }
-    }
+    SitePropagator spId(1.0);
 
-    LatticePropagator GTrPropG_VVAA(grid);
-    GTrPropG_VVAA = Zero();
-    LatticePropagator GPropG_VVAA(grid);
+    PropagatorField GPropG_VVAA(grid);
     GPropG_VVAA = Zero();
     for (int g = 0; g < GHs.size(); g++)
     {
         Gamma GH = GHs[g];
-        GTrPropG_VVAA += spId * GH * trace(prop * GH);
-        GPropG_VVAA += GH * prop * GH;
+        if (r == 1)
+        {
+            GPropG_VVAA += spId * GH * trace(prop * GH);
+        }
+        else
+        {
+            GPropG_VVAA += GH * prop * GH;
+        }
     }
-    return std::make_pair(GTrPropG_VVAA, GPropG_VVAA);
+    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -205,7 +205,7 @@ template <typename FImpl>
 void TDMixingTopC<FImpl>::setup(void)
 {
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<LatticePropagator>, "GdsG_pp", 1, 2, LatticePropagator(env().getGrid()));   
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));   
     envTmpLat(ComplexField, "corr");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -233,7 +233,7 @@ void TDMixingTopC<FImpl>::execute(void)
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<LatticePropagator>, GdsG_pp);
+    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
     std::vector<Complex> buf(Nt);
     for (int p = 0; p < 2; p++)
     {
@@ -241,21 +241,24 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            auto tmp = GH_VVAA_cap(*ql1[i]);
-            GdsG_pp[0] = tmp.first;  // r1
-            GdsG_pp[1] = tmp.second; // r2
+            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1);  // r1
+            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r+1);
+                res.info.eta = std::to_string(i);
                 buf = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
-		res.corr.clear();
+                res.corr.clear();
                 res.corr = buf;
                 result.push_back(res);
             }
         }
     }
 
-
+    // save result, and hand it to environment
+    saveResult(par().output, "DMixingTopC", result);
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
 }
 
 
