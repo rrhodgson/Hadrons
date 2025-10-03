@@ -75,6 +75,15 @@ class TDMixingTopA: public Module<DMixingTopAPar>
 {
 public:
     FERM_TYPE_ALIASES(FImpl,);
+    class Metadata : Serializable
+    {
+    public:
+        GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
+                                        std::string, rr,
+                                        std::string, parity,
+                                        std::string, eta_max);
+    };
+    typedef Correlator<Metadata, std::vector<Complex>> Result;
 public:
     // constructor
     TDMixingTopA(const std::string name);
@@ -88,6 +97,8 @@ public:
     virtual void setup(void);
     // execution
     virtual void execute(void);
+    // bespoke subcontractions
+    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopA, TDMixingTopA<FIMPL>, MContraction);
@@ -133,11 +144,48 @@ std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
     return output;
 }
 
+template <typename FImpl>
+typename TDMixingTopA<FImpl>::PropagatorField TDMixingTopA<FImpl>::GH_VVAA_cap(const TDMixingTopA<FImpl>::PropagatorField &prop, int r)
+{
+    assert(r==1 or r==2);
+
+    GridBase *grid = envGetGrid(FermionField);
+
+    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
+                             Gamma(Gamma::Algebra::GammaY),
+                             Gamma(Gamma::Algebra::GammaZ),
+                             Gamma(Gamma::Algebra::GammaT),
+                             Gamma(Gamma::Algebra::GammaXGamma5),
+                             Gamma(Gamma::Algebra::GammaYGamma5),
+                             Gamma(Gamma::Algebra::GammaZGamma5),
+                             Gamma(Gamma::Algebra::GammaTGamma5)};
+
+    SitePropagator spId(1.0);
+
+    PropagatorField GPropG_VVAA(grid);
+    GPropG_VVAA = Zero();
+    for (int g = 0; g < GHs.size(); g++)
+    {
+        Gamma GH = GHs[g];
+        if (r == 1)
+        {
+            GPropG_VVAA += spId * GH * trace(prop * GH);
+        }
+        else
+        {
+            GPropG_VVAA += GH * prop * GH;
+        }
+    }
+    return GPropG_VVAA;
+};
+
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
 void TDMixingTopA<FImpl>::setup(void)
 {
-    envTmpLat(ComplexField, "corr");
+    envTmpLat(PropagatorField, "qcul");
+    envTmpLat(PropagatorField, "qcur");
+
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
@@ -145,6 +193,34 @@ void TDMixingTopA<FImpl>::setup(void)
 template <typename FImpl>
 void TDMixingTopA<FImpl>::execute(void)
 {
+    LOG(Message) << "Computing D-meson mixing diagram, topology D" << std::endl;
+    LOG(Message) << "qULeft  : " << par().qULeft << std::endl;
+    LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
+    LOG(Message) << "qURight : " << par().qURight << std::endl;
+    LOG(Message) << "qCRight : " << par().qCRight << std::endl;
+    LOG(Message) << "qInt1   : " << par().qInt1 << std::endl;
+    LOG(Message) << "qInt2   : " << par().qInt2 << std::endl;
+      
+    std::vector<Result> result;
+    Result res;
+    
+    const int Nt{env().getDim(Tdir)};
+    GridCartesian *grid = envGetGrid(FermionField);
+    
+    auto &qul = envGet(PropagatorField, par().qULeft);
+    auto &qcl = envGet(PropagatorField, par().qCLeft);
+    auto &qur = envGet(PropagatorField, par().qURight);
+    auto &qcr = envGet(PropagatorField, par().qCRight);
+    auto &qi1 = envGet(std::vector<PropagatorField *>, par().qInt1);
+    auto &qi2 = envGet(std::vector<PropagatorField *>, par().qInt2);
+
+    envGetTmp(PropagatorField, qcul);
+    envGetTmp(PropagatorField, qcur);
+
+    Gamma g5(Gamma::Algebra::Gamma5);   
+
+    qcul = qcl * g5 * g5 * adj(qul) * g5;
+    qcur = qcr * g5 * g5 * adj(qur) * g5;
 
 }
 
