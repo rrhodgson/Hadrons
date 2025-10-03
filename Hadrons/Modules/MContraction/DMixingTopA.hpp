@@ -98,6 +98,9 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
+    virtual SlicedPropagator contractA_half_ti(const PropagatorField &GcuG, const std::vector<Coordinate>& xs); 
+    virtual std::vector<SlicedPropagator> contractA_half_tf(const PropagatorField &GcuG, const std::vector<PropagatorField> &ds_prop_pt); 
+    virtual std::vector<std::vector<Complex>> contractA(const SlicedPropagator &A, const std::vector<SlicedPropagator> &B); 
     virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
@@ -137,12 +140,60 @@ template <typename FImpl>
 std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
 {
     std::vector<std::string> output;
-
+    
     if (!par().output.empty())
         output.push_back(resultFilename(par().output));
-
+    
     return output;
 }
+
+template <typename FImpl>
+typename TDMixingTopA<FImpl>::SlicedPropagator TDMixingTopA<FImpl>::contractA_half_ti(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<Coordinate>& xs) 
+{
+    int Nt = GcuG.Grid()->_fdimensions[3];
+    SlicedPropagator A(Nt);
+    for (int t1=0; t1<Nt; t1++) {
+        A[t1] = peekSite(GcuG,xs[t1]);
+    }
+    return A;
+}
+
+template <typename FImpl>
+std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>::contractA_half_tf(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<typename TDMixingTopA<FImpl>::PropagatorField> &ds_prop_pt) 
+{
+    int Nt = GcuG.Grid()->_fdimensions[3];
+    Gamma g5(Gamma::Algebra::Gamma5);
+    
+    std::vector<SlicedPropagator> B(Nt, SlicedPropagator(Nt));
+    for (int t1=0; t1<Nt; t1++) {
+        SlicedPropagator buf;
+        const auto& ds = ds_prop_pt[t1];
+        PropagatorField tmp = g5*adj(ds)*g5 * GcuG * ds;
+        sliceSum(tmp, buf, Tp);
+        for (int t2=0; t2<Nt; t2++)
+	{
+            B[t1][t2] = buf[t2];
+	}
+    }
+    return B;
+}
+
+template <typename FImpl>
+std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contractA(const typename TDMixingTopA<FImpl>::SlicedPropagator &A, const std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> &B) 
+{
+    int Nt = A.size();
+    
+    std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
+    for (int t1=0; t1<Nt; t1++)
+    {
+        for (int t2=0; t2<Nt; t2++)
+	{
+            corr[t1][t2] = TensorRemove(trace( A[t1] * B[t1][t2] ));
+	}
+    }
+    return corr;
+}
+
 
 template <typename FImpl>
 typename TDMixingTopA<FImpl>::PropagatorField TDMixingTopA<FImpl>::GH_VVAA_cap(const TDMixingTopA<FImpl>::PropagatorField &prop, int r)
@@ -185,7 +236,9 @@ void TDMixingTopA<FImpl>::setup(void)
 {
     envTmpLat(PropagatorField, "qcul");
     envTmpLat(PropagatorField, "qcur");
-
+    envTmp(std::vector<PropagatorField>, "GcuG_l", 1, 2, PropagatorField(env().getGrid()));
+    envTmp(std::vector<PropagatorField>, "GcuG_r", 1, 2, PropagatorField(env().getGrid()));
+    
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
@@ -216,11 +269,20 @@ void TDMixingTopA<FImpl>::execute(void)
 
     envGetTmp(PropagatorField, qcul);
     envGetTmp(PropagatorField, qcur);
+    envGetTmp(std::vector<PropagatorField>, GcuG_l);
+    envGetTmp(std::vector<PropagatorField>, GcuG_r);
 
     Gamma g5(Gamma::Algebra::Gamma5);   
 
     qcul = qcl * g5 * g5 * adj(qul) * g5;
     qcur = qcr * g5 * g5 * adj(qur) * g5;
+
+    GcuG_l[0] = GH_VVAA_cap(qcul, 1); // r1
+    GcuG_l[1] = GH_VVAA_cap(qcul, 2); // r2
+    GcuG_r[0] = GH_VVAA_cap(qcur, 1); // r1
+    GcuG_r[1] = GH_VVAA_cap(qcur, 2); // r2
+    
+
 
 }
 
