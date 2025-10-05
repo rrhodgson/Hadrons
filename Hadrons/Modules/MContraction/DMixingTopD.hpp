@@ -279,7 +279,10 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(std::vector<PropagatorField>, GdsG_pp);
     // std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
     envGetTmp(std::vector<std::vector<std::vector<Complex>>>, buf);
-    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+
+    std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+
     for (int p = 0; p < 2; p++)
     {
         for (int i = 0; i < Neta; i++)
@@ -308,33 +311,50 @@ void TDMixingTopD<FImpl>::execute(void)
                     }
                 }
 
-                // Average noises up to imax (+ remove diagonal terms)
+                // Average noise up to imax (+ add diagonal when loops are different)
                 for (int imax = 1; imax <= Neta; imax++)
                 {
-                    for (int t0 = 0; t0 < Nt; t0++)
+                    const double norm = (!same_loop_noise)
+                                            ? (imax * imax)
+                                            : (imax > 1 ? (imax * (imax - 1)) : 1.0);
+
+                    int i = imax - 1;
+                    for (int j = 0; j < i; j++)
                     {
-                        std::fill(tmp[t0].begin(), tmp[t0].end(), 0.0);
-                    }
-                    const double norm = (!same_loop_noise) ? 1.0 / (imax * imax) : (imax > 1 ? 1.0 / (imax * (imax - 1)) : 1.0);
-                    for (int i = 0; i < imax; i++)
-                    {
-                        for (int j = 0; j < imax; j++)
+                        const auto &c1 = buf[j + Neta * i];
+                        const auto &c2 = buf[i + Neta * j];
+
+                        // Symmetrize
+                        for (int t1 = 0; t1 < Nt; t1++)
                         {
-                            if (i == j and same_loop_noise)
-                                continue;
-                            const auto &c = buf[j + Neta * i];
-                            for (int t1 = 0; t1 < Nt; t1++)
+                            for (int t2 = 0; t2 < Nt; t2++)
                             {
-                                for (int t2 = 0; t2 < Nt; t2++)
-                                {
-                                    tmp[t1][t2] += c[t1][t2] * norm;
-                                }
+                                tmpSum[t1][t2] += c1[t1][t2] + c2[t1][t2];
                             }
+                        }
+                    }
+                    if (!same_loop_noise)
+                    {
+                        // Add diagonal term
+                        const auto &c_diag = buf[i + Neta * i];
+                        for (int t1 = 0; t1 < Nt; t1++)
+                        {
+                            for (int t2 = 0; t2 < Nt; t2++)
+                            {
+                                tmpSum[t1][t2] += c_diag[t1][t2];
+                            }
+                        }
+                    }
+                    for (int t1 = 0; t1 < Nt; t1++)
+                    {
+                        for (int t2 = 0; t2 < Nt; t2++)
+                        {
+                            tmpRes[t1][t2] = tmpSum[t1][t2] / norm;
                         }
                     }
                     res.info.eta_max = std::to_string(imax);
                     res.corr.clear();
-                    res.corr = tmp;
+                    res.corr = tmpRes;
                     result.push_back(res);
                 }
             }
