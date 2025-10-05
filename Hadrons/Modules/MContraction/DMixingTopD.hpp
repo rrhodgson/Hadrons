@@ -311,6 +311,10 @@ void TDMixingTopD<FImpl>::execute(void)
                     }
                 }
 
+                // Initialise tmpSum for each (p,r,s) combination
+                for (auto &row : tmpSum)
+                    std::fill(row.begin(), row.end(), Complex(0.0));
+
                 // Average noise up to imax (+ add diagonal when loops are different)
                 for (int imax = 1; imax <= Neta; imax++)
                 {
