@@ -101,7 +101,7 @@ public:
     // bespoke subcontractions
     virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
     virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
-    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
+    virtual void GH_VVAA_cap(const PropagatorField &prop, std::vector<PropagatorField> &out);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -185,10 +185,10 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename
 };
 
 template <typename FImpl>
-typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
+void TDMixingTopD<FImpl>::GH_VVAA_cap(
+    const typename TDMixingTopD<FImpl>::PropagatorField &prop,
+    std::vector<typename TDMixingTopD<FImpl>::PropagatorField> &out)
 {
-    assert(r == 1 or r == 2);
-
     GridBase *grid = envGetGrid(FermionField);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
@@ -201,22 +201,14 @@ typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(c
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
     SitePropagator spId(1.0);
+    out[0] = Zero();
+    out[1] = Zero();
 
-    PropagatorField GPropG_VVAA(grid);
-    GPropG_VVAA = Zero();
-    for (int g = 0; g < GHs.size(); g++)
+    for (const auto &GH : GHs)
     {
-        Gamma GH = GHs[g];
-        if (r == 1)
-        {
-            GPropG_VVAA += spId * GH * trace(prop * GH);
-        }
-        else
-        {
-            GPropG_VVAA += GH * prop * GH;
-        }
+        out[0] += spId * GH * trace(prop * GH);
+        out[1] += GH * prop * GH;
     }
-    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -288,8 +280,7 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1); // r1
-            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
+            GH_VVAA_cap(*ql1[i], GdsG_pp);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
