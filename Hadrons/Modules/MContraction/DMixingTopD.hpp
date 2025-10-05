@@ -161,23 +161,22 @@ typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_h
 };
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_if, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_fi)
+std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
-    Gamma GT(Gamma::Algebra::GammaT);
 
     // Kept general in case anyone ever wants to play with this
     Gamma Gsrc = G5;
     Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
 
-    int Nt = half_if.size();
+    int Nt = half_lr.size();
 
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
         {
-            corr[t1][t2] = TensorRemove(trace(half_if[t1] * Gsrc * half_fi[t2] * Gsnk));
+            corr[t1][t2] = TensorRemove(trace(half_lr[t1] * Gsrc * half_rl[t2] * Gsnk));
         }
     }
 
