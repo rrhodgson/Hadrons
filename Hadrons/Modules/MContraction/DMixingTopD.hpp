@@ -216,13 +216,12 @@ void TDMixingTopD<FImpl>::setup(void)
 {
 
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
     int Neta = ql1.size();
     const int Nt{env().getDim(Tdir)};
     envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
     envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
-    envTmp(std::vector<std::vector<std::vector<Complex>>>, "buf", 1, Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
 
     if (par().qLoop1 != par().qLoop2)
     {
@@ -264,12 +263,10 @@ void TDMixingTopD<FImpl>::execute(void)
     // std::vector<SlicedPropagator> half_rl(2 * Neta, SlicedPropagator(Nt));
     envGetTmp(std::vector<SlicedPropagator>, half_lr);
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
+    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
-    // std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
-    envGetTmp(std::vector<std::vector<std::vector<Complex>>>, buf);
 
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
@@ -293,13 +290,6 @@ void TDMixingTopD<FImpl>::execute(void)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
                 res.info.parity = (p == 0) ? "+" : "-";
-                for (int i = 0; i < Neta; i++)
-                {
-                    for (int j = 0; j < Neta; j++)
-                    {
-                        buf[j + Neta * i] = contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
-                    }
-                }
 
                 // Initialise tmpSum for each (p,r,s) combination
                 for (auto &row : tmpSum)
@@ -315,8 +305,10 @@ void TDMixingTopD<FImpl>::execute(void)
                     int i = imax - 1;
                     for (int j = 0; j < i; j++)
                     {
-                        const auto &c1 = buf[j + Neta * i];
-                        const auto &c2 = buf[i + Neta * j];
+                        const auto &c1 =
+                            contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
+                        const auto &c2 =
+                            contract_D(half_lr[j + Neta * r], half_rl[i + Neta * s]);
 
                         // Symmetrize
                         for (int t1 = 0; t1 < Nt; t1++)
@@ -330,7 +322,8 @@ void TDMixingTopD<FImpl>::execute(void)
                     if (!same_loop_noise)
                     {
                         // Add diagonal term
-                        const auto &c_diag = buf[i + Neta * i];
+                        const auto &c_diag =
+                            contract_D(half_lr[i + Neta * r], half_rl[i + Neta * s]);
                         for (int t1 = 0; t1 < Nt; t1++)
                         {
                             for (int t2 = 0; t2 < Nt; t2++)
