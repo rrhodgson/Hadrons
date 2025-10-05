@@ -187,7 +187,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename
 template <typename FImpl>
 typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
 {
-    assert(r==1 or r==2);
+    assert(r == 1 or r == 2);
 
     GridBase *grid = envGetGrid(FermionField);
 
