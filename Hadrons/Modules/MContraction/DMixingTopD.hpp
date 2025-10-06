@@ -188,6 +188,8 @@ void TDMixingTopD<FImpl>::GH_VVAA_cap(
     const typename TDMixingTopD<FImpl>::PropagatorField &prop,
     std::vector<typename TDMixingTopD<FImpl>::PropagatorField> &out)
 {
+    assert(out.size() == 2);
+
     GridBase *grid = envGetGrid(FermionField);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
