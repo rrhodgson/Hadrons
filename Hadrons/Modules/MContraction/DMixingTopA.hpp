@@ -66,8 +66,8 @@ public:
                                     std::string,    qCLeft,
                                     std::string,    qURight,
                                     std::string,    qCRight,
-                                    std::string,    qInt1,
-                                    std::string,    qInt2,
+                                    std::string,    qInt,
+                                    std::string,    points,
                                     std::string,    output);
 };
 
@@ -123,8 +123,8 @@ std::vector<std::string> TDMixingTopA<FImpl>::getInput(void)
 	                           par().qCLeft,
 	                           par().qURight,
 	                           par().qCRight,
-	                           par().qInt1,
-	                           par().qInt2};
+	                           par().qInt,
+	                           par().points};
     return in;
 }
 
@@ -215,8 +215,8 @@ void TDMixingTopA<FImpl>::execute(void)
     LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
     LOG(Message) << "qURight : " << par().qURight << std::endl;
     LOG(Message) << "qCRight : " << par().qCRight << std::endl;
-    LOG(Message) << "qInt1   : " << par().qInt1 << std::endl;
-    LOG(Message) << "qInt2   : " << par().qInt2 << std::endl;
+    LOG(Message) << "qInt    : " << par().qInt << std::endl;
+    LOG(Message) << "points  : " << par().points << std::endl;
       
     std::vector<Result> result;
     Result res;
@@ -224,12 +224,12 @@ void TDMixingTopA<FImpl>::execute(void)
     const int Nt{env().getDim(Tdir)};
     GridCartesian *grid = envGetGrid(FermionField);
     
-    auto &qul = envGet(PropagatorField, par().qULeft);
-    auto &qcl = envGet(PropagatorField, par().qCLeft);
-    auto &qur = envGet(PropagatorField, par().qURight);
-    auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi1 = envGet(std::vector<PropagatorField *>, par().qInt1);
-    auto &qi2 = envGet(std::vector<PropagatorField *>, par().qInt2);
+    auto &qul    = envGet(PropagatorField, par().qULeft);
+    auto &qcl    = envGet(PropagatorField, par().qCLeft);
+    auto &qur    = envGet(PropagatorField, par().qURight);
+    auto &qcr    = envGet(PropagatorField, par().qCRight);
+    auto &qi     = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &points = envGet(std::vector<Coordinate>, par().points);
 
     envGetTmp(PropagatorField, qcul);
     envGetTmp(PropagatorField, qcur);
