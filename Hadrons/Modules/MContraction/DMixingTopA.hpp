@@ -81,8 +81,7 @@ public:
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
                                         std::string, rr,
-                                        std::string, parity,
-                                        std::string, eta_max);
+                                        std::string, parity);
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
 public:
@@ -202,7 +201,10 @@ void TDMixingTopA<FImpl>::setup(void)
     envTmpLat(PropagatorField, "qcur");
     envTmp(std::vector<PropagatorField>, "GcuG_l", 1, 2, PropagatorField(env().getGrid()));
     envTmp(std::vector<PropagatorField>, "GcuG_r", 1, 2, PropagatorField(env().getGrid()));
-    
+    const int Nt{env().getDim(Tdir)};
+    envTmp(std::vector<SlicedPropagator>, "half_l", 1, 2, SlicedPropagator(Nt));
+    envTmp(std::vector<std::vector<SlicedPropagator>>, "half_r", 1, 2, std::vector<SlicedPropagator>(Nt, SlicedPropagator(Nt)));
+
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
@@ -228,13 +230,15 @@ void TDMixingTopA<FImpl>::execute(void)
     auto &qcl    = envGet(PropagatorField, par().qCLeft);
     auto &qur    = envGet(PropagatorField, par().qURight);
     auto &qcr    = envGet(PropagatorField, par().qCRight);
-    auto &qi     = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &qi     = envGet(std::vector<PropagatorField>, par().qInt);
     auto &points = envGet(std::vector<Coordinate>, par().points);
 
     envGetTmp(PropagatorField, qcul);
     envGetTmp(PropagatorField, qcur);
     envGetTmp(std::vector<PropagatorField>, GcuG_l);
     envGetTmp(std::vector<PropagatorField>, GcuG_r);
+    envGetTmp(std::vector<SlicedPropagator>, half_l);
+    envGetTmp(std::vector<std::vector<SlicedPropagator>>, half_r);
 
     Gamma g5(Gamma::Algebra::Gamma5);   
 
@@ -244,7 +248,34 @@ void TDMixingTopA<FImpl>::execute(void)
     DMixingUtils<FImpl>::GH_VVAA_cap(qcul, GcuG_l);
     DMixingUtils<FImpl>::GH_VVAA_cap(qcur, GcuG_r);
 
+    std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
 
+    // parity +, parity -
+    std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+
+    for (int p = 0; p < 2; p++)
+    {
+        for(int r = 0; r < 2; r++)
+	{
+            half_l[r] = contractA_half_ti(GcuG_l[r] * parityG[p], points);
+            half_r[r] = contractA_half_tf(GcuG_r[r] * parityG[p], qi); 
+	}
+        for(int r = 0; r < 2; r++)
+	{
+            for(int s = 0; s < 2; s++)
+            {
+                res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
+                res.info.parity = (p == 0) ? "+" : "-";
+
+	        tmpRes = contractA(half_l[r], half_r[s]);
+
+		res.corr.clear();
+                res.corr = tmpRes;
+                result.push_back(res);
+
+            }
+        }
+    }
 }
 
 
