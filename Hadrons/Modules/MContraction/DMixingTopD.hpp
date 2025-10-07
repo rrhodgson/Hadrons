@@ -152,9 +152,9 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 template <typename FImpl>
 typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(const TDMixingTopD<FImpl>::PropagatorField &prop_c, const TDMixingTopD<FImpl>::PropagatorField &prop_u, const TDMixingTopD<FImpl>::PropagatorField &loop)
 {
-    Gamma G5(Gamma::Algebra::Gamma5);
+    Gamma g5(Gamma::Algebra::Gamma5);
 
-    PropagatorField tmp = G5 * adj(prop_u) * G5 * loop * prop_c;
+    PropagatorField tmp = g5 * adj(prop_u) * g5 * loop * prop_c;
     SlicedPropagator ret;
     sliceSum(tmp, ret, Tp);
     return ret;
@@ -163,15 +163,15 @@ typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_h
 template <typename FImpl>
 std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl)
 {
-    Gamma G5(Gamma::Algebra::Gamma5);
+    Gamma g5(Gamma::Algebra::Gamma5);
 
     // Kept general in case anyone ever wants to play with this
-    Gamma Gsrc = G5;
+    Gamma Gsrc = g5;
     Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
 
     int Nt = half_lr.size();
 
-    std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
