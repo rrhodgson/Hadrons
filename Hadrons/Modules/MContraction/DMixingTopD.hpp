@@ -101,7 +101,7 @@ public:
     // bespoke subcontractions
     virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
     virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
-    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
+    virtual void GH_VVAA_cap(const PropagatorField &prop, std::vector<PropagatorField> &out);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -161,23 +161,22 @@ typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_h
 };
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_if, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_fi)
+std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl)
 {
     Gamma G5(Gamma::Algebra::Gamma5);
-    Gamma GT(Gamma::Algebra::GammaT);
 
     // Kept general in case anyone ever wants to play with this
     Gamma Gsrc = G5;
     Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
 
-    int Nt = half_if.size();
+    int Nt = half_lr.size();
 
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
         {
-            corr[t1][t2] = TensorRemove(trace(half_if[t1] * Gsrc * half_fi[t2] * Gsnk));
+            corr[t1][t2] = TensorRemove(trace(half_lr[t1] * Gsrc * half_rl[t2] * Gsnk));
         }
     }
 
@@ -185,9 +184,11 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename
 };
 
 template <typename FImpl>
-typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(const TDMixingTopD<FImpl>::PropagatorField &prop, int r)
+void TDMixingTopD<FImpl>::GH_VVAA_cap(
+    const typename TDMixingTopD<FImpl>::PropagatorField &prop,
+    std::vector<typename TDMixingTopD<FImpl>::PropagatorField> &out)
 {
-    assert(r==1 or r==2);
+    assert(out.size() == 2);
 
     GridBase *grid = envGetGrid(FermionField);
 
@@ -201,22 +202,14 @@ typename TDMixingTopD<FImpl>::PropagatorField TDMixingTopD<FImpl>::GH_VVAA_cap(c
                              Gamma(Gamma::Algebra::GammaTGamma5)};
 
     SitePropagator spId(1.0);
+    out[0] = Zero();
+    out[1] = Zero();
 
-    PropagatorField GPropG_VVAA(grid);
-    GPropG_VVAA = Zero();
-    for (int g = 0; g < GHs.size(); g++)
+    for (const auto &GH : GHs)
     {
-        Gamma GH = GHs[g];
-        if (r == 1)
-        {
-            GPropG_VVAA += spId * GH * trace(prop * GH);
-        }
-        else
-        {
-            GPropG_VVAA += GH * prop * GH;
-        }
+        out[0] += spId * GH * trace(prop * GH);
+        out[1] += GH * prop * GH;
     }
-    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -225,13 +218,12 @@ void TDMixingTopD<FImpl>::setup(void)
 {
 
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
     int Neta = ql1.size();
     const int Nt{env().getDim(Tdir)};
     envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
     envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
-    envTmp(std::vector<std::vector<std::vector<Complex>>>, "buf", 1, Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
 
     if (par().qLoop1 != par().qLoop2)
     {
@@ -273,20 +265,20 @@ void TDMixingTopD<FImpl>::execute(void)
     // std::vector<SlicedPropagator> half_rl(2 * Neta, SlicedPropagator(Nt));
     envGetTmp(std::vector<SlicedPropagator>, half_lr);
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
+    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
 
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
-    // std::vector<std::vector<std::vector<Complex>>> buf(Neta * Neta, std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt)));
-    envGetTmp(std::vector<std::vector<std::vector<Complex>>>, buf);
-    std::vector<std::vector<Complex>> tmp = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+
+    std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+
     for (int p = 0; p < 2; p++)
     {
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1); // r1
-            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
+            GH_VVAA_cap(*ql1[i], GdsG_pp);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);
@@ -300,41 +292,58 @@ void TDMixingTopD<FImpl>::execute(void)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
                 res.info.parity = (p == 0) ? "+" : "-";
-                for (int i = 0; i < Neta; i++)
-                {
-                    for (int j = 0; j < Neta; j++)
-                    {
-                        buf[j + Neta * i] = contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
-                    }
-                }
 
-                // Average noises up to imax (+ remove diagonal terms)
+                // Initialise tmpSum for each (p,r,s) combination
+                for (auto &row : tmpSum)
+                    std::fill(row.begin(), row.end(), Complex(0.0));
+
+                // Average noise up to imax (+ add diagonal when loops are different)
                 for (int imax = 1; imax <= Neta; imax++)
                 {
-                    for (int t0 = 0; t0 < Nt; t0++)
+                    const double norm = (!same_loop_noise)
+                                            ? (imax * imax)
+                                            : (imax > 1 ? (imax * (imax - 1)) : 1.0);
+
+                    int i = imax - 1;
+                    for (int j = 0; j < i; j++)
                     {
-                        std::fill(tmp[t0].begin(), tmp[t0].end(), 0.0);
-                    }
-                    const double norm = (!same_loop_noise) ? 1.0 / (imax * imax) : (imax > 1 ? 1.0 / (imax * (imax - 1)) : 1.0);
-                    for (int i = 0; i < imax; i++)
-                    {
-                        for (int j = 0; j < imax; j++)
+                        const auto &c1 =
+                            contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
+                        const auto &c2 =
+                            contract_D(half_lr[j + Neta * r], half_rl[i + Neta * s]);
+
+                        // Symmetrize
+                        for (int t1 = 0; t1 < Nt; t1++)
                         {
-                            if (i == j and same_loop_noise)
-                                continue;
-                            const auto &c = buf[j + Neta * i];
-                            for (int t1 = 0; t1 < Nt; t1++)
+                            for (int t2 = 0; t2 < Nt; t2++)
                             {
-                                for (int t2 = 0; t2 < Nt; t2++)
-                                {
-                                    tmp[t1][t2] += c[t1][t2] * norm;
-                                }
+                                tmpSum[t1][t2] += c1[t1][t2] + c2[t1][t2];
                             }
+                        }
+                    }
+                    if (!same_loop_noise)
+                    {
+                        // Add diagonal term
+                        const auto &c_diag =
+                            contract_D(half_lr[i + Neta * r], half_rl[i + Neta * s]);
+                        for (int t1 = 0; t1 < Nt; t1++)
+                        {
+                            for (int t2 = 0; t2 < Nt; t2++)
+                            {
+                                tmpSum[t1][t2] += c_diag[t1][t2];
+                            }
+                        }
+                    }
+                    for (int t1 = 0; t1 < Nt; t1++)
+                    {
+                        for (int t2 = 0; t2 < Nt; t2++)
+                        {
+                            tmpRes[t1][t2] = tmpSum[t1][t2] / norm;
                         }
                     }
                     res.info.eta_max = std::to_string(imax);
                     res.corr.clear();
-                    res.corr = tmp;
+                    res.corr = tmpRes;
                     result.push_back(res);
                 }
             }
