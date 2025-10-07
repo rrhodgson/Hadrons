@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Hadrons.  If not, see <http://www.gnu.org/licenses/>.
  *
- * See the full license in the file "LICENSE" in the top level distribution 
+ * See the full license in the file "LICENSE" in the top level distribution
  * directory.
  */
 
@@ -37,7 +37,7 @@ BEGIN_HADRONS_NAMESPACE
 
 /******************************************************************************
  *                         DMixingTopC                                        *
- *                  (Fig. 4 (C) in arxiv:2504.16189)  
+ *                  (Fig. 4 (C) in arxiv:2504.16189)
  *                 qCL                             qUR
  *               /--<--\    qLoop1                /--<--\
  *              /       \    /--\      /--\      /       \
@@ -58,21 +58,21 @@ BEGIN_HADRONS_NAMESPACE
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
 
-class DMixingTopCPar: Serializable
+class DMixingTopCPar : Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(DMixingTopCPar,
-                                    std::string,    qULeft,
-                                    std::string,    qCLeft,
-                                    std::string,    qLoop1,
-                                    std::string,    output);
+                                    std::string, qULeft,
+                                    std::string, qCLeft,
+                                    std::string, qLoop1,
+                                    std::string, output);
 };
 
 template <typename FImpl>
-class TDMixingTopC: public Module<DMixingTopCPar>
+class TDMixingTopC : public Module<DMixingTopCPar>
 {
 public:
-    FERM_TYPE_ALIASES(FImpl,);
+    FERM_TYPE_ALIASES(FImpl, );
     class Metadata : Serializable
     {
     public:
@@ -82,6 +82,7 @@ public:
                                         std::string, eta);
     };
     typedef Correlator<Metadata, Complex> Result;
+
 public:
     // constructor
     TDMixingTopC(const std::string name);
@@ -107,16 +108,17 @@ MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
 // constructor /////////////////////////////////////////////////////////////////
 template <typename FImpl>
 TDMixingTopC<FImpl>::TDMixingTopC(const std::string name)
-: Module<DMixingTopCPar>(name)
-{}
+    : Module<DMixingTopCPar>(name)
+{
+}
 
 // dependencies/products ///////////////////////////////////////////////////////
 template <typename FImpl>
 std::vector<std::string> TDMixingTopC<FImpl>::getInput(void)
 {
-    std::vector<std::string> in = {par().qULeft, 
-                               par().qCLeft,
-                               par().qLoop1};
+    std::vector<std::string> in = {par().qULeft,
+                                   par().qCLeft,
+                                   par().qLoop1};
 
     return in;
 }
@@ -143,12 +145,11 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
 template <typename FImpl>
 std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FImpl>::PropagatorField &prop_c, const TDMixingTopC<FImpl>::PropagatorField &prop_u, const TDMixingTopC<FImpl>::PropagatorField &loop)
 {
-    Gamma G5(Gamma::Algebra::Gamma5);
-    Gamma GT(Gamma::Algebra::GammaT);
+    Gamma g5(Gamma::Algebra::Gamma5);
 
-    Gamma Gsrc = G5;
+    Gamma Gsrc = g5;
 
-    LatticeComplex tmp = trace( prop_c * Gsrc * G5*adj(prop_u)*G5 * loop );
+    LatticeComplex tmp = trace(prop_c * Gsrc * g5 * adj(prop_u) * g5 * loop);
     SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
     std::vector<Complex> ret2(ret.size());
@@ -164,7 +165,7 @@ template <typename FImpl>
 void TDMixingTopC<FImpl>::setup(void)
 {
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));   
+    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
     envTmpLat(ComplexField, "corr");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -193,21 +194,21 @@ void TDMixingTopC<FImpl>::execute(void)
     // parity +, parity -
     std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
     envGetTmp(std::vector<PropagatorField>, GdsG_pp);
-    std::vector<Complex> buf(Nt);
+
     for (int p = 0; p < 2; p++)
     {
         res.info.parity = (p == 0) ? "+" : "-";
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-	    DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
+            DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
             for (int r = 0; r < 2; r++)
             {
-                res.info.r = std::to_string(r+1);
+                res.info.r = std::to_string(r + 1);
                 res.info.eta = std::to_string(i);
-                buf = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
+
                 res.corr.clear();
-                res.corr = buf;
+                res.corr = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
                 result.push_back(res);
             }
         }
@@ -218,7 +219,6 @@ void TDMixingTopC<FImpl>::execute(void)
     auto &out = envGet(HadronsSerializable, getName());
     out = result;
 }
-
 
 END_MODULE_NAMESPACE
 
