@@ -1,9 +1,10 @@
 /*
- * VectorPackRef.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
+ * RandomPoint.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
  * Copyright (C) 2015 - 2023
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
+ * Author: Raoul Hodgson <raoul.hodgson@desy.de>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +24,12 @@
  */
 
 /*  END LEGAL */
-#include <Hadrons/Modules/MUtilities/VectorPackRef.hpp>
+#include <Hadrons/Modules/MSource/RandomPoint.hpp>
 
 using namespace Grid;
 using namespace Hadrons;
-using namespace MUtilities;
+using namespace MSource;
 
-template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<FIMPL::PropagatorField>;
-template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<std::vector<int>>;
-template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<std::string>;
+template class HADRONS_NAMESPACE::MSource::TRandomPoint<FIMPL>;
+template class HADRONS_NAMESPACE::MSource::TRandomPoint<ScalarImplCR>;
+
