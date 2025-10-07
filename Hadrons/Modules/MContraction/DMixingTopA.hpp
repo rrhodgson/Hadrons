@@ -31,6 +31,7 @@
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
 #include <Hadrons/Serialization.hpp>
+#include <Hadrons/Modules/MContraction/DMixingUtils.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -101,7 +102,6 @@ public:
     virtual SlicedPropagator contractA_half_ti(const PropagatorField &GcuG, const std::vector<Coordinate>& xs); 
     virtual std::vector<SlicedPropagator> contractA_half_tf(const PropagatorField &GcuG, const std::vector<PropagatorField> &ds_prop_pt); 
     virtual std::vector<std::vector<Complex>> contractA(const SlicedPropagator &A, const std::vector<SlicedPropagator> &B); 
-    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopA, TDMixingTopA<FIMPL>, MContraction);
@@ -194,42 +194,6 @@ std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contractA(const typename 
     return corr;
 }
 
-
-template <typename FImpl>
-typename TDMixingTopA<FImpl>::PropagatorField TDMixingTopA<FImpl>::GH_VVAA_cap(const TDMixingTopA<FImpl>::PropagatorField &prop, int r)
-{
-    assert(r==1 or r==2);
-
-    GridBase *grid = envGetGrid(FermionField);
-
-    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
-                             Gamma(Gamma::Algebra::GammaY),
-                             Gamma(Gamma::Algebra::GammaZ),
-                             Gamma(Gamma::Algebra::GammaT),
-                             Gamma(Gamma::Algebra::GammaXGamma5),
-                             Gamma(Gamma::Algebra::GammaYGamma5),
-                             Gamma(Gamma::Algebra::GammaZGamma5),
-                             Gamma(Gamma::Algebra::GammaTGamma5)};
-
-    SitePropagator spId(1.0);
-
-    PropagatorField GPropG_VVAA(grid);
-    GPropG_VVAA = Zero();
-    for (int g = 0; g < GHs.size(); g++)
-    {
-        Gamma GH = GHs[g];
-        if (r == 1)
-        {
-            GPropG_VVAA += spId * GH * trace(prop * GH);
-        }
-        else
-        {
-            GPropG_VVAA += GH * prop * GH;
-        }
-    }
-    return GPropG_VVAA;
-};
-
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
 void TDMixingTopA<FImpl>::setup(void)
@@ -277,11 +241,8 @@ void TDMixingTopA<FImpl>::execute(void)
     qcul = qcl * g5 * g5 * adj(qul) * g5;
     qcur = qcr * g5 * g5 * adj(qur) * g5;
 
-    GcuG_l[0] = GH_VVAA_cap(qcul, 1); // r1
-    GcuG_l[1] = GH_VVAA_cap(qcul, 2); // r2
-    GcuG_r[0] = GH_VVAA_cap(qcur, 1); // r1
-    GcuG_r[1] = GH_VVAA_cap(qcur, 2); // r2
-    
+    DMixingUtils<FImpl>::GH_VVAA_cap(qcul, GcuG_l);
+    DMixingUtils<FImpl>::GH_VVAA_cap(qcur, GcuG_r);
 
 
 }

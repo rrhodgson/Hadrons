@@ -31,6 +31,7 @@
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
 #include <Hadrons/Serialization.hpp>
+#include <Hadrons/Modules/MContraction/DMixingUtils.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -63,10 +64,7 @@ public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(DMixingTopCPar,
                                     std::string,    qULeft,
                                     std::string,    qCLeft,
-                                    //std::string,    qURight,
-                                    //std::string,    qCRight,
                                     std::string,    qLoop1,
-                                    //std::string,    qLoop2,
                                     std::string,    output);
 };
 
@@ -99,7 +97,6 @@ public:
     virtual void execute(void);
     // bespoke subcontractions
     virtual std::vector<Complex> contract_C_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
-    virtual PropagatorField GH_VVAA_cap(const PropagatorField &prop, int r);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -119,10 +116,7 @@ std::vector<std::string> TDMixingTopC<FImpl>::getInput(void)
 {
     std::vector<std::string> in = {par().qULeft, 
                                par().qCLeft,
-                               //par().qURight,
-                               //par().qCRight,
-                               par().qLoop1};//,
-                               //par().qLoop2};
+                               par().qLoop1};
 
     return in;
 }
@@ -163,41 +157,6 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FIm
         ret2[t] = TensorRemove(ret[t]);
     }
     return ret2;
-};
-
-template <typename FImpl>
-typename TDMixingTopC<FImpl>::PropagatorField TDMixingTopC<FImpl>::GH_VVAA_cap(const TDMixingTopC<FImpl>::PropagatorField &prop, int r)
-{
-    assert(r==1 or r==2);
-
-    GridBase *grid = envGetGrid(FermionField);
-
-    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
-                             Gamma(Gamma::Algebra::GammaY),
-                             Gamma(Gamma::Algebra::GammaZ),
-                             Gamma(Gamma::Algebra::GammaT),
-                             Gamma(Gamma::Algebra::GammaXGamma5),
-                             Gamma(Gamma::Algebra::GammaYGamma5),
-                             Gamma(Gamma::Algebra::GammaZGamma5),
-                             Gamma(Gamma::Algebra::GammaTGamma5)};
-
-    SitePropagator spId(1.0);
-
-    PropagatorField GPropG_VVAA(grid);
-    GPropG_VVAA = Zero();
-    for (int g = 0; g < GHs.size(); g++)
-    {
-        Gamma GH = GHs[g];
-        if (r == 1)
-        {
-            GPropG_VVAA += spId * GH * trace(prop * GH);
-        }
-        else
-        {
-            GPropG_VVAA += GH * prop * GH;
-        }
-    }
-    return GPropG_VVAA;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -241,8 +200,7 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            GdsG_pp[0] = GH_VVAA_cap(*ql1[i], 1);  // r1
-            GdsG_pp[1] = GH_VVAA_cap(*ql1[i], 2); // r2
+	    DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r+1);

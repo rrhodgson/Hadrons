@@ -31,6 +31,7 @@
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
 #include <Hadrons/Serialization.hpp>
+#include <Hadrons/Modules/MContraction/DMixingUtils.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -101,7 +102,6 @@ public:
     // bespoke subcontractions
     virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
     virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
-    virtual void GH_VVAA_cap(const PropagatorField &prop, std::vector<PropagatorField> &out);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -183,35 +183,6 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename
     return corr;
 };
 
-template <typename FImpl>
-void TDMixingTopD<FImpl>::GH_VVAA_cap(
-    const typename TDMixingTopD<FImpl>::PropagatorField &prop,
-    std::vector<typename TDMixingTopD<FImpl>::PropagatorField> &out)
-{
-    assert(out.size() == 2);
-
-    GridBase *grid = envGetGrid(FermionField);
-
-    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
-                             Gamma(Gamma::Algebra::GammaY),
-                             Gamma(Gamma::Algebra::GammaZ),
-                             Gamma(Gamma::Algebra::GammaT),
-                             Gamma(Gamma::Algebra::GammaXGamma5),
-                             Gamma(Gamma::Algebra::GammaYGamma5),
-                             Gamma(Gamma::Algebra::GammaZGamma5),
-                             Gamma(Gamma::Algebra::GammaTGamma5)};
-
-    SitePropagator spId(1.0);
-    out[0] = Zero();
-    out[1] = Zero();
-
-    for (const auto &GH : GHs)
-    {
-        out[0] += spId * GH * trace(prop * GH);
-        out[1] += GH * prop * GH;
-    }
-};
-
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
 void TDMixingTopD<FImpl>::setup(void)
@@ -261,8 +232,6 @@ void TDMixingTopD<FImpl>::execute(void)
     int Neta = ql1.size();
     bool same_loop_noise = true;
 
-    // std::vector<SlicedPropagator> half_lr(2 * Neta, SlicedPropagator(Nt));
-    // std::vector<SlicedPropagator> half_rl(2 * Neta, SlicedPropagator(Nt));
     envGetTmp(std::vector<SlicedPropagator>, half_lr);
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
     envGetTmp(std::vector<PropagatorField>, GdsG_pp);
@@ -278,7 +247,7 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            GH_VVAA_cap(*ql1[i], GdsG_pp);
+            DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r] * parityG[p]);

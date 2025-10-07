@@ -31,6 +31,7 @@
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
 #include <Hadrons/Serialization.hpp>
+#include <Hadrons/Modules/MContraction/DMixingUtils.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
