@@ -179,18 +179,18 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
         for (const auto &GH1 : GHs)
         {
             const PropagatorField trA = (rL == 0)
-                                            ? PropagatorField(cuf * GH1 * cui)
-                                            : PropagatorField(ds * GH1 * parityG * cui);
+                                            ? PropagatorField(ds * parityG * GH1 * cui)
+                                            : PropagatorField(cuf * GH1 * cui);
 
             const PropagatorField trB = (rL == 0)
-                                            ? PropagatorField(ds * GH1 * parityG * dsD)
-                                            : PropagatorField(cuf * GH1 * dsD);
+                                            ? PropagatorField(cuf * GH1 * dsD)
+                                            : PropagatorField(ds * parityG * GH1 * dsD);
 
             if (same_r) // product of traces
             {
                 for (const auto &GH2 : GHs)
                 {
-                    LatticeComplex tmp = trace(trA * GH2) * trace(trB * GH2 * parityG);
+                    LatticeComplex tmp = trace(trA * GH2) * trace(trB * parityG * GH2);
                     sliceSum(tmp, buf, Tp);
                     for (int t2 = 0; t2 < Nt; ++t2)
                         corr[t1][t2] += TensorRemove(buf[t2]);
@@ -200,7 +200,7 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
             {
                 for (const auto &GH2 : GHs)
                 {
-                    LatticeComplex tmp = trace(trA * GH2 * trB * GH2 * parityG);
+                    LatticeComplex tmp = trace(trA * GH2 * trB * parityG * GH2);
                     sliceSum(tmp, buf, Tp);
                     for (int t2 = 0; t2 < Nt; ++t2)
                         corr[t1][t2] += TensorRemove(buf[t2]);

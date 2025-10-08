@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Hadrons.  If not, see <http://www.gnu.org/licenses/>.
  *
- * See the full license in the file "LICENSE" in the top level distribution 
+ * See the full license in the file "LICENSE" in the top level distribution
  * directory.
  */
 
@@ -40,14 +40,15 @@ template <typename FImpl>
 class DMixingUtils
 {
 public:
-    FERM_TYPE_ALIASES(FImpl,)
-    static void GH_VVAA_cap(const PropagatorField &prop, std::vector<PropagatorField> &out);
+    FERM_TYPE_ALIASES(FImpl, )
+    static void GH_VVAA_cap(std::vector<PropagatorField> &out, const PropagatorField &prop, const Gamma &parityG);
 };
 
 template <typename FImpl>
 void DMixingUtils<FImpl>::GH_VVAA_cap(
+    std::vector<typename DMixingUtils<FImpl>::PropagatorField> &out,
     const typename DMixingUtils<FImpl>::PropagatorField &prop,
-    std::vector<typename DMixingUtils<FImpl>::PropagatorField> &out)
+    const Gamma &parityG)
 {
     assert(out.size() == 2);
 
@@ -66,8 +67,8 @@ void DMixingUtils<FImpl>::GH_VVAA_cap(
 
     for (const auto &GH : GHs)
     {
-        out[0] += spId * GH * trace(prop * GH);
-        out[1] += GH * prop * GH;
+        out[0] += GH * prop * parityG * GH;
+        out[1] += spId * GH * trace(prop * parityG * GH);
     }
 };
 

@@ -192,7 +192,8 @@ void TDMixingTopC<FImpl>::execute(void)
     int Neta = ql1.size();
 
     // parity +, parity -
-    std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    std::vector<Gamma> parityG =
+        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
     envGetTmp(std::vector<PropagatorField>, GdsG_pp);
 
     for (int p = 0; p < 2; p++)
@@ -201,14 +202,15 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
+            DMixingUtils<FImpl>::GH_VVAA_cap(GdsG_pp, *ql1[i], parityG[p]);
+
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r + 1);
                 res.info.eta = std::to_string(i);
 
                 res.corr.clear();
-                res.corr = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
+                res.corr = contract_C_half(qcl, qul, GdsG_pp[r]);
                 result.push_back(res);
             }
         }
