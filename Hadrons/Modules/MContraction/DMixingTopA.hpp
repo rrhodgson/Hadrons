@@ -168,10 +168,10 @@ std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>:
     int Nt = GcuG.Grid()->_fdimensions[3];
     Gamma g5(Gamma::Algebra::Gamma5);
     std::vector<SlicedPropagator> B(Nt, SlicedPropagator(Nt));
+    SlicedPropagator buf;
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
-        SlicedPropagator buf;
         const auto &ds = ds_prop_pt[t1];
         PropagatorField tmp = g5 * adj(ds) * g5 * GcuG * ds;
         sliceSum(tmp, buf, Tp);
