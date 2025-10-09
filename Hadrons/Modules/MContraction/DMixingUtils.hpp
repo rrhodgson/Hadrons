@@ -4,7 +4,7 @@
  * Copyright (C) 2015 - 2025
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
- * Author: Matteo di Carlo <matteo.dicarlo@cern.ch>
+ * Author: Matteo Di Carlo <matteo.dicarlo@cern.ch>
  * Author: Felix Erben <felix.erben@cern.ch>
  * Author: Raoul Hodgson <raoul.hodgson@desy.de>
  *
