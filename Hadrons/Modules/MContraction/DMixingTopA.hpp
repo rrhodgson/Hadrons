@@ -168,10 +168,10 @@ std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>:
     int Nt = GcuG.Grid()->_fdimensions[3];
     Gamma g5(Gamma::Algebra::Gamma5);
     std::vector<SlicedPropagator> B(Nt, SlicedPropagator(Nt));
+    SlicedPropagator buf;
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
-        SlicedPropagator buf;
         const auto &ds = ds_prop_pt[t1];
         PropagatorField tmp = g5 * adj(ds) * g5 * GcuG * ds;
         sliceSum(tmp, buf, Tp);
@@ -252,18 +252,19 @@ void TDMixingTopA<FImpl>::execute(void)
     qcul = qcl * g5 * g5 * adj(qul) * g5;
     qcur = qcr * g5 * g5 * adj(qur) * g5;
 
-    DMixingUtils<FImpl>::GH_VVAA_cap(qcul, GcuG_l);
-    DMixingUtils<FImpl>::GH_VVAA_cap(qcur, GcuG_r);
+    // parity +, parity -  (multiplying from left)
+    std::vector<Gamma> parityG =
+        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
 
-    // parity +, parity -
-    std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Gamma(Gamma::Algebra::Identity));
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Gamma(Gamma::Algebra::Identity));
 
     for (int p = 0; p < 2; p++)
     {
         for (int r = 0; r < 2; r++)
         {
-            half_l[r] = contractA_half_l(GcuG_l[r] * parityG[p], points);
-            half_r[r] = contractA_half_r(GcuG_r[r] * parityG[p], qi);
+            half_l[r] = contractA_half_l(parityG[p] * GcuG_l[r], points);
+            half_r[r] = contractA_half_r(parityG[p] * GcuG_r[r], qi);
         }
         for (int r = 0; r < 2; r++)
         {

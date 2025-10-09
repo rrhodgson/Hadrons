@@ -165,7 +165,7 @@ template <typename FImpl>
 void TDMixingTopC<FImpl>::setup(void)
 {
     GridCartesian *grid = envGetGrid(FermionField);
-    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
+    envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
     envTmpLat(ComplexField, "corr");
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -192,8 +192,9 @@ void TDMixingTopC<FImpl>::execute(void)
     int Neta = ql1.size();
 
     // parity +, parity -
-    std::vector<Gamma> parityG = {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
+    std::vector<Gamma> parityG =
+        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    envGetTmp(std::vector<PropagatorField>, GdsG);
 
     for (int p = 0; p < 2; p++)
     {
@@ -201,14 +202,15 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_VVAA_cap(*ql1[i], GdsG_pp);
+            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], parityG[p]);
+
             for (int r = 0; r < 2; r++)
             {
                 res.info.r = std::to_string(r + 1);
                 res.info.eta = std::to_string(i);
 
                 res.corr.clear();
-                res.corr = contract_C_half(qcl, qul, GdsG_pp[r] * parityG[p]);
+                res.corr = contract_C_half(qcl, qul, GdsG[r]);
                 result.push_back(res);
             }
         }
