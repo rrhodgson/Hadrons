@@ -248,7 +248,7 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_VVAA_cap(GdsG_pp, *ql1[i], parityG[p]);
+            DMixingUtils<FImpl>::GH_cap(GdsG_pp, *ql1[i], parityG[p]);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r]);

@@ -41,11 +41,11 @@ class DMixingUtils
 {
 public:
     FERM_TYPE_ALIASES(FImpl, )
-    static void GH_VVAA_cap(std::vector<PropagatorField> &out, const PropagatorField &prop, const Gamma &parityG);
+    static void GH_cap(std::vector<PropagatorField> &out, const PropagatorField &prop, const Gamma &parityG);
 };
 
 template <typename FImpl>
-void DMixingUtils<FImpl>::GH_VVAA_cap(
+void DMixingUtils<FImpl>::GH_cap(
     std::vector<typename DMixingUtils<FImpl>::PropagatorField> &out,
     const typename DMixingUtils<FImpl>::PropagatorField &prop,
     const Gamma &parityG)

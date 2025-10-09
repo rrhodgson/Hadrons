@@ -256,8 +256,8 @@ void TDMixingTopA<FImpl>::execute(void)
     std::vector<Gamma> parityG =
         {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
 
-    DMixingUtils<FImpl>::GH_VVAA_cap(GcuG_l, qcul, Gamma(Gamma::Algebra::Identity));
-    DMixingUtils<FImpl>::GH_VVAA_cap(GcuG_r, qcur, Gamma(Gamma::Algebra::Identity));
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Gamma(Gamma::Algebra::Identity));
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Gamma(Gamma::Algebra::Identity));
 
     for (int p = 0; p < 2; p++)
     {
