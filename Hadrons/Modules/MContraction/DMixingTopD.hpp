@@ -194,7 +194,7 @@ void TDMixingTopD<FImpl>::setup(void)
     const int Nt{env().getDim(Tdir)};
     envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
     envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
-    envTmp(std::vector<PropagatorField>, "GdsG_pp", 1, 2, PropagatorField(env().getGrid()));
+    envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
 
     if (par().qLoop1 != par().qLoop2)
     {
@@ -234,7 +234,7 @@ void TDMixingTopD<FImpl>::execute(void)
 
     envGetTmp(std::vector<SlicedPropagator>, half_lr);
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
-    envGetTmp(std::vector<PropagatorField>, GdsG_pp);
+    envGetTmp(std::vector<PropagatorField>, GdsG);
 
     // parity +, parity -
     std::vector<Gamma> parityG =
@@ -248,11 +248,11 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_cap(GdsG_pp, *ql1[i], parityG[p]);
+            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], parityG[p]);
             for (int r = 0; r < 2; r++)
             {
-                half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG_pp[r]);
-                half_rl[i + Neta * r] = contract_D_half(qcr, qul, GdsG_pp[r]);
+                half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG[r]);
+                half_rl[i + Neta * r] = contract_D_half(qcr, qul, GdsG[r]);
             }
         }
 
