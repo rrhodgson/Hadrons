@@ -111,7 +111,7 @@ template <typename FImpl>
 void TRandomPoint<FImpl>::setup(void)
 {
     envCreateLat(PropagatorField , getName());
-    envCreate(std::vector<int>, getName()+"_pos", 1, 0);
+    envCreate(Coordinate, getName()+"_pos", 1, 0);
     envCreate(std::string     , getName()+"_str", 1, "");
 }
 
@@ -130,7 +130,7 @@ void TRandomPoint<FImpl>::execute(void)
 
     auto& rng = rngSerial();
 
-    auto &position = envGet(std::vector<int>, getName()+"_pos");
+    auto &position = envGet(Coordinate, getName()+"_pos");
     position.resize(Nd);
     for (int d=0; d<Nd; d++)
     {
