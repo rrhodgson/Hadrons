@@ -49,13 +49,19 @@ BEGIN_HADRONS_NAMESPACE
  *              \       /    \--/      \--/      \       /
  *               \-->--/              qLoop2      \-->--/
  *                 qUL                              qCR
+ *          tsrc         t1                   t2           tsnk
  *
- * four configurations for the two weak Hamiltonians M_r M_{r'}
+ * Four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)
- * rr'=11: tr()
- * rr'=12: tr()
- * rr'=21: tr()
- * rr'=22: tr()
+ *
+ * p = +: GA x GB =   V x V + A x A
+ * p = -: GA x GB = - A x V - V x A
+ * 
+ * Contractions: [...] = tr(...) -- only one side is computed
+ * r = 1: 
+ *  [qCL * g5 * qUL * GB1 * qLoop1 * GA1]
+ * r = 2:
+ *  [qCL * g5 * qUL * GB1]*[qLoop1 * GA1]
  *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
