@@ -99,7 +99,7 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<std::vector<Complex>> contractB(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField> &ds_prop_pt, const std::vector<Coordinate> &xs, const std::array<Gamma, 8> &GHs, const Gamma &parityG, int rL, int rR);
+    virtual std::vector<std::vector<Complex>> contractB(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField*> &ds_prop_pt, const std::vector<Coordinate*> &xs, const std::array<Gamma, 8> &GHs, const Gamma &parityG, int rL, int rR);
 };
 
 MODULE_REGISTER_TMP(DMixingTopB, TDMixingTopB<FIMPL>, MContraction);
@@ -152,8 +152,8 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
     const TDMixingTopB<FImpl>::PropagatorField &ui,
     const TDMixingTopB<FImpl>::PropagatorField &cf,
     const TDMixingTopB<FImpl>::PropagatorField &uf,
-    const std::vector<typename TDMixingTopB<FImpl>::PropagatorField> &ds_prop_pt,
-    const std::vector<Coordinate> &xs,
+    const std::vector<typename TDMixingTopB<FImpl>::PropagatorField*> &ds_prop_pt,
+    const std::vector<Coordinate*> &xs,
     const std::array<Gamma, 8> &GHs,
     const Gamma &parityG,
     const int rL,
@@ -170,11 +170,11 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
     for (int t1 = 0; t1 < Nt; t1++)
     {
 
-        const auto &ds = ds_prop_pt[t1];
+        const auto &ds = *ds_prop_pt[t1];
         const PropagatorField dsD = g5 * adj(ds) * g5;
 
-        const PropagatorField cui = peekSite(ci, xs[t1]) * adj(ui) * g5;
-        const PropagatorField cuf = cf * adj(peekSite(uf, xs[t1])) * g5;
+        const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
+        const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
 
         for (const auto &GH1 : GHs)
         {
@@ -240,8 +240,8 @@ void TDMixingTopB<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi = envGet(std::vector<PropagatorField>, par().qInt);
-    auto &points = envGet(std::vector<Coordinate>, par().points);
+    auto &qi = envGet(std::vector<PropagatorField*>, par().qInt);
+    auto &points = envGet(std::vector<Coordinate*>, par().points);
 
     std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
                              Gamma(Gamma::Algebra::GammaY),
@@ -270,6 +270,11 @@ void TDMixingTopB<FImpl>::execute(void)
             }
         }
     }
+
+    // save result, and hand it to environment
+    saveResult(par().output, "DMixingTopB", result);
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
 }
 
 END_MODULE_NAMESPACE

@@ -63,7 +63,7 @@ public:
 };
 
 MODULE_REGISTER_TMP(PropagatorVectorPackRef, TVectorPackRef<FIMPL::PropagatorField>, MUtilities);
-MODULE_REGISTER_TMP(CoordinateVectorPackRef, TVectorPackRef<std::vector<int>>      , MUtilities);
+MODULE_REGISTER_TMP(CoordinateVectorPackRef, TVectorPackRef<Coordinate>            , MUtilities);
 MODULE_REGISTER_TMP(StringVectorPackRef    , TVectorPackRef<std::string>           , MUtilities);
 
 /******************************************************************************

@@ -30,5 +30,5 @@ using namespace Hadrons;
 using namespace MUtilities;
 
 template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<FIMPL::PropagatorField>;
-template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<std::vector<int>>;
+template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<Coordinate>;
 template class HADRONS_NAMESPACE::MUtilities::TVectorPackRef<std::string>;
