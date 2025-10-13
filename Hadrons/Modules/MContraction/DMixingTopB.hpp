@@ -1,10 +1,12 @@
 /*
- * WeakEye3pt.cpp, part of Hadrons (https://github.com/aportelli/Hadrons)
+ * DMixingTopB.hpp, part of Hadrons (https://github.com/aportelli/Hadrons)
  *
- * Copyright (C) 2015 - 2023
+ * Copyright (C) 2015 - 2025
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
+ * Author: Matteo Di Carlo <matteo.dicarlo@cern.ch>
  * Author: Felix Erben <felix.erben@cern.ch>
+ * Author: Raoul Hodgson <raoul.hodgson@desy.de>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
