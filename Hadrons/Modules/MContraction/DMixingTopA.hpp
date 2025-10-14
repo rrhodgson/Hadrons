@@ -56,9 +56,9 @@ BEGIN_HADRONS_NAMESPACE
  *
  * p = +: GA x GB =   V x V + A x A
  * p = -: GA x GB = - A x V - V x A
- * 
+ *
  * Contractions: [...] = tr(...)
- * rr' = 11: 
+ * rr' = 11:
  *  [qInt1 * GA1 * qCL * g5 * qUL * GB1 * qInt2 * GA2 * qCR * g5 * qUR * GB2]
  * rr' = 12:
  *  [qInt1 * GA1 * qCL * g5 * qUL * GB1 * qInt2 * GA2]*[qCR * g5 * qUR * GB2]
@@ -265,25 +265,25 @@ void TDMixingTopA<FImpl>::execute(void)
     qcur = qcr * g5 * g5 * adj(qur) * g5;
 
     // parity +, parity -  (multiplying from left)
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    const auto &GHpar = DMixingUtils<FImpl>::parityG;
 
-    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Gamma(Gamma::Algebra::Identity));
-    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Gamma(Gamma::Algebra::Identity));
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, 0);
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, 0);
 
     for (int p = 0; p < 2; p++)
     {
+        res.info.parity = (p == 0) ? "+" : "-";
+
         for (int r = 0; r < 2; r++)
         {
-            half_l[r] = contractA_half_l(parityG[p] * GcuG_l[r], points);
-            half_r[r] = contractA_half_r(parityG[p] * GcuG_r[r], qi);
+            half_l[r] = contractA_half_l(GHpar[p] * GcuG_l[r], points);
+            half_r[r] = contractA_half_r(GHpar[p] * GcuG_r[r], qi);
         }
         for (int r = 0; r < 2; r++)
         {
             for (int s = 0; s < 2; s++)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                res.info.parity = (p == 0) ? "+" : "-";
 
                 res.corr.clear();
                 res.corr = contractA(half_l[r], half_r[s]);

@@ -248,19 +248,17 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
-    // parity +, parity -
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
 
     for (int p = 0; p < 2; p++)
     {
+        res.info.parity = (p == 0) ? "+" : "-";
+        
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], parityG[p]);
+            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG[r]);
@@ -273,7 +271,6 @@ void TDMixingTopD<FImpl>::execute(void)
             for (int s = 0; s < 2; s++)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                res.info.parity = (p == 0) ? "+" : "-";
 
                 // Initialise tmpSum for each (p,r,s) combination
                 for (auto &row : tmpSum)

@@ -56,9 +56,9 @@ BEGIN_HADRONS_NAMESPACE
  *
  * p = +: GA x GB =   V x V + A x A
  * p = -: GA x GB = - A x V - V x A
- * 
+ *
  * Contractions: [...] = tr(...) -- only one side is computed
- * r = 1: 
+ * r = 1:
  *  [qCL * g5 * qUL * GB1 * qLoop1 * GA1]
  * r = 2:
  *  [qCL * g5 * qUL * GB1]*[qLoop1 * GA1]
@@ -198,24 +198,23 @@ void TDMixingTopC<FImpl>::execute(void)
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
 
     int Neta = ql1.size();
-
-    // parity +, parity -
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
     for (int p = 0; p < 2; p++)
     {
         res.info.parity = (p == 0) ? "+" : "-";
+        
         for (int i = 0; i < Neta; i++)
         {
+            res.info.eta = std::to_string(i);
+
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], parityG[p]);
+            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
 
             for (int r = 0; r < 2; r++)
             {
-                res.info.r = std::to_string(r + 1);
-                res.info.eta = std::to_string(i);
+                res.info.r = std::to_string(r + 1);    
 
                 res.corr.clear();
                 res.corr = contract_C_half(qcl, qul, GdsG[r]);
