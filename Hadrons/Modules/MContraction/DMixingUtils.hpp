@@ -40,26 +40,38 @@ template <typename FImpl>
 class DMixingUtils
 {
 public:
-    FERM_TYPE_ALIASES(FImpl, )
-    static void GH_cap(std::vector<PropagatorField> &out, const PropagatorField &prop, const Gamma &parityG);
+    FERM_TYPE_ALIASES(FImpl, );
+    static const std::array<Gamma, 8> GHs;
+    static const std::array<Gamma, 2> parityG;
+    static void GH_cap(
+        std::vector<PropagatorField> &out,
+        const PropagatorField &prop,
+        const int p);
 };
+
+template <typename FImpl>
+const std::array<Gamma, 8> DMixingUtils<FImpl>::GHs = {
+    Gamma(Gamma::Algebra::GammaX),
+    Gamma(Gamma::Algebra::GammaY),
+    Gamma(Gamma::Algebra::GammaZ),
+    Gamma(Gamma::Algebra::GammaT),
+    Gamma(Gamma::Algebra::GammaXGamma5),
+    Gamma(Gamma::Algebra::GammaYGamma5),
+    Gamma(Gamma::Algebra::GammaZGamma5),
+    Gamma(Gamma::Algebra::GammaTGamma5)};
+
+template <typename FImpl>
+const std::array<Gamma, 2> DMixingUtils<FImpl>::parityG = {
+    Gamma(Gamma::Algebra::Identity),
+    Gamma(Gamma::Algebra::Gamma5)};
 
 template <typename FImpl>
 void DMixingUtils<FImpl>::GH_cap(
     std::vector<typename DMixingUtils<FImpl>::PropagatorField> &out,
     const typename DMixingUtils<FImpl>::PropagatorField &prop,
-    const Gamma &parityG)
+    const int p)
 {
     assert(out.size() == 2);
-
-    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
-                             Gamma(Gamma::Algebra::GammaY),
-                             Gamma(Gamma::Algebra::GammaZ),
-                             Gamma(Gamma::Algebra::GammaT),
-                             Gamma(Gamma::Algebra::GammaXGamma5),
-                             Gamma(Gamma::Algebra::GammaYGamma5),
-                             Gamma(Gamma::Algebra::GammaZGamma5),
-                             Gamma(Gamma::Algebra::GammaTGamma5)};
 
     SitePropagator spId(1.0);
     out[0] = Zero();
@@ -67,8 +79,8 @@ void DMixingUtils<FImpl>::GH_cap(
 
     for (const auto &GH : GHs)
     {
-        out[0] += GH * prop * parityG * GH;
-        out[1] += spId * GH * trace(prop * parityG * GH);
+        out[0] += GH * prop * parityG[p] * GH;
+        out[1] += spId * GH * trace(prop * parityG[p] * GH);
     }
 };
 

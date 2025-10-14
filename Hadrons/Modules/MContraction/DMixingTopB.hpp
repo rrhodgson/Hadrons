@@ -41,21 +41,31 @@ BEGIN_HADRONS_NAMESPACE
  *                         DMixingTopB                                        *
  *                (Fig. 4 (B) in arxiv:2504.16189)
  *                     qCL   ┌───┐       qUR
- *                 /----<----| r |---------<---------\
- *                /          └───┘----\               \
- *               /             \       \ qInt2         \
- *           g5 *               \       \               * g5
- *               \         qInt1 \       \             /
- *                \               \----┌───┐          /
- *                 \--------->---------| r'|---->----/
- *                          qUL        └───┘  qCR
+ *                 /---->----| r |--------->-----------\
+ *                /          └───┘--<--\                \
+ *               /              \        \ qInt2         \
+ *           g5 *                \        \               * g5
+ *               \          qInt1 \        \             /
+ *                \                \-->--┌───┐          /
+ *                 \---------<-----------| r'|----<----/
+ *                          qUL          └───┘  qCR
+ *          tsrc               t1          t2             tsnk
  *
- * four configurations for the two weak Hamiltonians M_r M_{r'}
+ * Four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)
- * rr'=11: tr()
- * rr'=12: tr()
- * rr'=21: tr()
- * rr'=22: tr()
+ *
+ * p = +: GA x GB =   V x V + A x A
+ * p = -: GA x GB = - A x V - V x A
+ *
+ * Contractions: [...] = tr(...)
+ * rr' = 11:
+ *  [qInt1 * GA1 * qCL * g5 * qUL * GB2]*[qCR * g5 * qUR * GB1 * qInt2 * GA2]
+ * rr' = 12:
+ *  [qInt1 * GA1 * qCL * g5 * qUL * GB2 * qCR * g5 * qUR * GB1 * qInt2 * GA2]
+ * rr' = 21:
+ *  [qCR * g5 * qUR * GB1 * qCL * g5 * qUL * GB2 * qInt1 * GA1 * qInt2 * GA2]
+ * rr' = 22:
+ *  [qCR * g5 * qUR * GB1 * qCL * g5 * qUL * GB2]*[qInt1 * GA1 * qInt2 * GA2]
  *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
@@ -101,7 +111,7 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<std::vector<Complex>> contractB(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField*> &ds_prop_pt, const std::vector<Coordinate*> &xs, const std::array<Gamma, 8> &GHs, const Gamma &parityG, int rL, int rR);
+    virtual std::vector<std::vector<Complex>> contractB(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField *> &ds_prop_pt, const std::vector<Coordinate *> &xs, const int p, const int rL, const int rR);
 };
 
 MODULE_REGISTER_TMP(DMixingTopB, TDMixingTopB<FIMPL>, MContraction);
@@ -154,10 +164,9 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
     const TDMixingTopB<FImpl>::PropagatorField &ui,
     const TDMixingTopB<FImpl>::PropagatorField &cf,
     const TDMixingTopB<FImpl>::PropagatorField &uf,
-    const std::vector<typename TDMixingTopB<FImpl>::PropagatorField*> &ds_prop_pt,
-    const std::vector<Coordinate*> &xs,
-    const std::array<Gamma, 8> &GHs,
-    const Gamma &parityG,
+    const std::vector<typename TDMixingTopB<FImpl>::PropagatorField *> &ds_prop_pt,
+    const std::vector<Coordinate *> &xs,
+    const int p,
     const int rL,
     const int rR)
 {
@@ -166,6 +175,9 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
 
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<TComplex> buf;
+
+    const auto &GHs = DMixingUtils<FImpl>::GHs;
+    const auto &GHpar = DMixingUtils<FImpl>::parityG;
 
     const bool same_r = rR == rL;
 
@@ -181,18 +193,18 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
         for (const auto &GH1 : GHs)
         {
             const PropagatorField trA = (rL == 0)
-                                            ? PropagatorField(ds * parityG * GH1 * cui)
+                                            ? PropagatorField(ds * GHpar[p] * GH1 * cui)
                                             : PropagatorField(cuf * GH1 * cui);
 
             const PropagatorField trB = (rL == 0)
                                             ? PropagatorField(cuf * GH1 * dsD)
-                                            : PropagatorField(ds * parityG * GH1 * dsD);
+                                            : PropagatorField(ds * GHpar[p] * GH1 * dsD);
 
             if (same_r) // product of traces
             {
                 for (const auto &GH2 : GHs)
                 {
-                    LatticeComplex tmp = trace(trA * GH2) * trace(trB * parityG * GH2);
+                    LatticeComplex tmp = trace(trA * GH2) * trace(trB * GHpar[p] * GH2);
                     sliceSum(tmp, buf, Tp);
                     for (int t2 = 0; t2 < Nt; ++t2)
                         corr[t1][t2] += TensorRemove(buf[t2]);
@@ -202,7 +214,7 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
             {
                 for (const auto &GH2 : GHs)
                 {
-                    LatticeComplex tmp = trace(trA * GH2 * trB * parityG * GH2);
+                    LatticeComplex tmp = trace(trA * GH2 * trB * GHpar[p] * GH2);
                     sliceSum(tmp, buf, Tp);
                     for (int t2 = 0; t2 < Nt; ++t2)
                         corr[t1][t2] += TensorRemove(buf[t2]);
@@ -242,32 +254,21 @@ void TDMixingTopB<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi = envGet(std::vector<PropagatorField*>, par().qInt);
-    auto &points = envGet(std::vector<Coordinate*>, par().points);
-
-    std::array<Gamma, 8> GHs{Gamma(Gamma::Algebra::GammaX),
-                             Gamma(Gamma::Algebra::GammaY),
-                             Gamma(Gamma::Algebra::GammaZ),
-                             Gamma(Gamma::Algebra::GammaT),
-                             Gamma(Gamma::Algebra::GammaXGamma5),
-                             Gamma(Gamma::Algebra::GammaYGamma5),
-                             Gamma(Gamma::Algebra::GammaZGamma5),
-                             Gamma(Gamma::Algebra::GammaTGamma5)};
-
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    auto &qi = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &points = envGet(std::vector<Coordinate *>, par().points);
 
     for (int p = 0; p < 2; p++)
     {
+        res.info.parity = (p == 0) ? "+" : "-";
+
         for (int r = 0; r < 2; r++)
         {
             for (int s = 0; s < 2; s++)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                res.info.parity = (p == 0) ? "+" : "-";
+
                 res.corr.clear();
-                res.corr =
-                    contractB(qcl, qul, qcr, qur, qi, points, GHs, parityG[p], r, s);
+                res.corr = contractB(qcl, qul, qcr, qur, qi, points, p, r, s);
                 result.push_back(res);
             }
         }

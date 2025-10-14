@@ -41,21 +41,31 @@ BEGIN_HADRONS_NAMESPACE
  *                         DMixingTopA                                        *
  *                (Fig. 4 (A) in arxiv:2504.16189)
  *                   qCL        qInt1        qUR
- *                 /--<--\   /----<----\   /--<--\
+ *                 /-->--\   /---->----\   /-->--\
  *                /       \ /           \ /       \
  *               /       ┌───┐         ┌───┐       \
  *           g5 *        | r |         | r'|        * g5
  *               \       └───┘         └───┘       /
  *                \       / \           / \       /
- *                 \-->--/   \---->----/   \-->--/
- *                   qUL        qInt1        qCR
+ *                 \--<--/   \----<----/   \--<--/
+ *                   qUL        qInt2        qCR
+ *         tsrc           t1            t2          tsnk
  *
- * four configurations for the two weak Hamiltonians M_r M_{r'}
+ * Four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)
- * rr'=11: tr()
- * rr'=12: tr()
- * rr'=21: tr()
- * rr'=22: tr()
+ *
+ * p = +: GA x GB =   V x V + A x A
+ * p = -: GA x GB = - A x V - V x A
+ *
+ * Contractions: [...] = tr(...)
+ * rr' = 11:
+ *  [qInt1 * GA1 * qCL * g5 * qUL * GB1 * qInt2 * GA2 * qCR * g5 * qUR * GB2]
+ * rr' = 12:
+ *  [qInt1 * GA1 * qCL * g5 * qUL * GB1 * qInt2 * GA2]*[qCR * g5 * qUR * GB2]
+ * rr' = 21:
+ *  [qCL * g5 * qUL * GB1]*[qInt2 * GA2 * qCR * g5 * qUR * GB2 * qInt1 * GA1]
+ * rr' = 22:
+ *  [qCL * g5 * qUL * GB1]*[qInt1 * GA1 * qInt2 * GA2]*[qCR * g5 * qUR * GB2]
  *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
@@ -101,8 +111,8 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual SlicedPropagator contractA_half_l(const PropagatorField &GcuG, const std::vector<Coordinate*> &xs);
-    virtual std::vector<SlicedPropagator> contractA_half_r(const PropagatorField &GcuG, const std::vector<PropagatorField*> &ds_prop_pt);
+    virtual SlicedPropagator contractA_half_l(const PropagatorField &GcuG, const std::vector<Coordinate *> &xs);
+    virtual std::vector<SlicedPropagator> contractA_half_r(const PropagatorField &GcuG, const std::vector<PropagatorField *> &ds_prop_pt);
     virtual std::vector<std::vector<Complex>> contractA(const SlicedPropagator &A, const std::vector<SlicedPropagator> &B);
 };
 
@@ -151,7 +161,7 @@ std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-typename TDMixingTopA<FImpl>::SlicedPropagator TDMixingTopA<FImpl>::contractA_half_l(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<Coordinate*> &xs)
+typename TDMixingTopA<FImpl>::SlicedPropagator TDMixingTopA<FImpl>::contractA_half_l(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<Coordinate *> &xs)
 {
     int Nt = GcuG.Grid()->_fdimensions[3];
     SlicedPropagator A(Nt);
@@ -165,7 +175,7 @@ typename TDMixingTopA<FImpl>::SlicedPropagator TDMixingTopA<FImpl>::contractA_ha
 }
 
 template <typename FImpl>
-std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>::contractA_half_r(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<typename TDMixingTopA<FImpl>::PropagatorField*> &ds_prop_pt)
+std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>::contractA_half_r(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<typename TDMixingTopA<FImpl>::PropagatorField *> &ds_prop_pt)
 {
     int Nt = GcuG.Grid()->_fdimensions[3];
     Gamma g5(Gamma::Algebra::Gamma5);
@@ -239,8 +249,8 @@ void TDMixingTopA<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi = envGet(std::vector<PropagatorField*>, par().qInt);
-    auto &points = envGet(std::vector<Coordinate*>, par().points);
+    auto &qi = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &points = envGet(std::vector<Coordinate *>, par().points);
 
     envGetTmp(PropagatorField, qcul);
     envGetTmp(PropagatorField, qcur);
@@ -255,25 +265,25 @@ void TDMixingTopA<FImpl>::execute(void)
     qcur = qcr * g5 * g5 * adj(qur) * g5;
 
     // parity +, parity -  (multiplying from left)
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
+    const auto &GHpar = DMixingUtils<FImpl>::parityG;
 
-    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Gamma(Gamma::Algebra::Identity));
-    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Gamma(Gamma::Algebra::Identity));
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, 0);
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, 0);
 
     for (int p = 0; p < 2; p++)
     {
+        res.info.parity = (p == 0) ? "+" : "-";
+
         for (int r = 0; r < 2; r++)
         {
-            half_l[r] = contractA_half_l(parityG[p] * GcuG_l[r], points);
-            half_r[r] = contractA_half_r(parityG[p] * GcuG_r[r], qi);
+            half_l[r] = contractA_half_l(GHpar[p] * GcuG_l[r], points);
+            half_r[r] = contractA_half_r(GHpar[p] * GcuG_r[r], qi);
         }
         for (int r = 0; r < 2; r++)
         {
             for (int s = 0; s < 2; s++)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                res.info.parity = (p == 0) ? "+" : "-";
 
                 res.corr.clear();
                 res.corr = contractA(half_l[r], half_r[s]);

@@ -41,21 +41,31 @@ BEGIN_HADRONS_NAMESPACE
  *                         DMixingTopD                                        *
  *                    (Fig. 4 (D) in arxiv:2504.16189)
  *             qCL   ┌───┐                 qUR
- *         /----<----| r |-----------------<--------------\
+ *         /---->----| r |----------------->--------------\
  *        /          └───┘                                 \
- *       /          /     \          qLoop2 /->-\           \
+ *       /          /     \          qLoop2 /-<-\           \
  *   g5 *           \     /                /     \           * g5
  *       \           \->-/ qLoop1          \     /          /
  *        \                                 ┌───┐          /
- *         \-------------->-----------------| r'|---->----/
+ *         \--------------<-----------------| r'|----<----/
  *                       qUL                └───┘  qCR
+ *  tsrc               t1                    t2              tsnk
  *
- * four configurations for the two weak Hamiltonians M_r M_{r'}
+ * Four configurations for the two weak Hamiltonians M_r M_{r'}
  * (cf. Fig. 3 in arxiv:2504.16189)
- * rr'=11: tr()
- * rr'=12: tr()
- * rr'=21: tr()
- * rr'=22: tr()
+ *
+ * p = +: GA x GB =   V x V + A x A
+ * p = -: GA x GB = - A x V - V x A
+ * 
+ * Contractions: [...] = tr(...)
+ * rr' = 11:
+ *  [qCR * g5 * qUR * GB1 * qLoop1 * GA1 * qCL * g5 * gUL * GB2 * gLoop2 * GA2]
+ * rr' = 12:
+ *  [qCR * g5 * qUR * GB1 * qLoop1 * GA1 * qCL * g5 * gUL * GB2]*[gLoop2 * GA2]
+ * rr' = 21:
+ *  [qCR * g5 * qUR * GB1 * qCL * g5 * gUL * GB2 * gLoop2 * GA2]*[qLoop1 * GA1]
+ * rr' = 22:
+ *  [qCR * g5 * qUR * GB1 * qCL * g5 * gUL * GB2]*[gLoop2 * GA2]*[qLoop1 * GA1]
  *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
@@ -238,19 +248,17 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(std::vector<SlicedPropagator>, half_rl);
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
-    // parity +, parity -
-    std::vector<Gamma> parityG =
-        {Gamma(Gamma::Algebra::Identity), Gamma(Gamma::Algebra::Gamma5)};
-
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
 
     for (int p = 0; p < 2; p++)
     {
+        res.info.parity = (p == 0) ? "+" : "-";
+        
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], parityG[p]);
+            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
             for (int r = 0; r < 2; r++)
             {
                 half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG[r]);
@@ -263,7 +271,6 @@ void TDMixingTopD<FImpl>::execute(void)
             for (int s = 0; s < 2; s++)
             {
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                res.info.parity = (p == 0) ? "+" : "-";
 
                 // Initialise tmpSum for each (p,r,s) combination
                 for (auto &row : tmpSum)
