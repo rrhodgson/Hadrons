@@ -112,16 +112,10 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    // virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c,
-    //                                          const PropagatorField &prop_u,
-    //                                          const PropagatorField &loop);
     virtual void contract_D_half(const PropagatorField &prop_c,
                                  const PropagatorField &prop_u,
                                  const PropagatorField &loop,
                                  SlicedPropagator &out);
-
-    // virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if,
-    //                                                      const SlicedPropagator &half_fi);
     virtual void contract_D(const SlicedPropagator &half_lr,
                            const SlicedPropagator &half_rl,
                            std::vector<std::vector<Complex>> &sum);
