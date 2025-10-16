@@ -56,7 +56,7 @@ BEGIN_HADRONS_NAMESPACE
  *
  * p = +: GA x GB =   V x V + A x A
  * p = -: GA x GB = - A x V - V x A
- * 
+ *
  * Contractions: [...] = tr(...)
  * rr' = 11:
  *  [qCR * g5 * qUR * GB1 * qLoop1 * GA1 * qCL * g5 * gUL * GB2 * gLoop2 * GA2]
@@ -112,8 +112,19 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
-    virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if, const SlicedPropagator &half_fi);
+    // virtual SlicedPropagator contract_D_half(const PropagatorField &prop_c,
+    //                                          const PropagatorField &prop_u,
+    //                                          const PropagatorField &loop);
+    virtual void contract_D_half(const PropagatorField &prop_c,
+                                 const PropagatorField &prop_u,
+                                 const PropagatorField &loop,
+                                 SlicedPropagator &out);
+
+    // virtual std::vector<std::vector<Complex>> contract_D(const SlicedPropagator &half_if,
+    //                                                      const SlicedPropagator &half_fi);
+    virtual void contract_D(const SlicedPropagator &half_lr,
+                           const SlicedPropagator &half_rl,
+                           std::vector<std::vector<Complex>> &sum);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -162,38 +173,31 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(const TDMixingTopD<FImpl>::PropagatorField &prop_c, const TDMixingTopD<FImpl>::PropagatorField &prop_u, const TDMixingTopD<FImpl>::PropagatorField &loop)
+inline void TDMixingTopD<FImpl>::contract_D_half(
+    const typename TDMixingTopD<FImpl>::PropagatorField &prop_c,
+    const typename TDMixingTopD<FImpl>::PropagatorField &prop_u,
+    const typename TDMixingTopD<FImpl>::PropagatorField &loop,
+    SlicedPropagator &out)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
     PropagatorField tmp = g5 * adj(prop_u) * g5 * loop * prop_c;
-    SlicedPropagator ret;
-    sliceSum(tmp, ret, Tp);
-    return ret;
+    sliceSum(tmp, out, Tp);
 };
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl)
+void TDMixingTopD<FImpl>::contract_D(
+    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr,
+    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl,
+    std::vector<std::vector<Complex>> &sum)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
+    const int Nt = (int)half_lr.size();
 
-    // Kept general in case anyone ever wants to play with this
-    Gamma Gsrc = g5;
-    Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
-
-    int Nt = half_lr.size();
-
-    std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
     for (int t1 = 0; t1 < Nt; t1++)
-    {
         for (int t2 = 0; t2 < Nt; t2++)
-        {
-            corr[t1][t2] = TensorRemove(trace(half_lr[t1] * Gsrc * half_rl[t2] * Gsnk));
-        }
-    }
-
-    return corr;
-};
+            sum[t1][t2] += TensorRemove(trace(half_lr[t1] * g5 * half_rl[t2] * g5));
+}
 
 // setup ///////////////////////////////////////////////////////////////////////
 template <typename FImpl>
@@ -201,11 +205,11 @@ void TDMixingTopD<FImpl>::setup(void)
 {
 
     GridCartesian *grid = envGetGrid(FermionField);
-    auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
-    int Neta = ql1.size();
-    const int Nt{env().getDim(Tdir)};
-    envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
-    envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
+
+    envTmpLat(PropagatorField, "half_lr_i");
+    envTmpLat(PropagatorField, "half_rl_i");
+    envTmpLat(PropagatorField, "half_lr_j");
+    envTmpLat(PropagatorField, "half_rl_j");
     envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
 
     if (par().qLoop1 != par().qLoop2)
@@ -228,7 +232,6 @@ void TDMixingTopD<FImpl>::execute(void)
     LOG(Message) << "qLoop2  : " << par().qLoop2 << std::endl;
 
     std::vector<Result> result;
-    Result res;
 
     const int Nt{env().getDim(Tdir)};
     GridCartesian *grid = envGetGrid(FermionField);
@@ -244,8 +247,10 @@ void TDMixingTopD<FImpl>::execute(void)
     int Neta = ql1.size();
     bool same_loop_noise = true;
 
-    envGetTmp(std::vector<SlicedPropagator>, half_lr);
-    envGetTmp(std::vector<SlicedPropagator>, half_rl);
+    envGetTmp(SlicedPropagator, half_lr_i);
+    envGetTmp(SlicedPropagator, half_rl_i);
+    envGetTmp(SlicedPropagator, half_lr_j);
+    envGetTmp(SlicedPropagator, half_rl_j);
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
@@ -253,75 +258,47 @@ void TDMixingTopD<FImpl>::execute(void)
 
     for (int p = 0; p < 2; p++)
     {
-        res.info.parity = (p == 0) ? "+" : "-";
-        
-        for (int i = 0; i < Neta; i++)
+        for (int r = 0; r < 2; ++r)
         {
-            // here one has to add ql2 if one wants them to be allowed to be different
-            DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
-            for (int r = 0; r < 2; r++)
+            for (int s = 0; s < 2; ++s)
             {
-                half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG[r]);
-                half_rl[i + Neta * r] = contract_D_half(qcr, qul, GdsG[r]);
-            }
-        }
-
-        for (int r = 0; r < 2; r++)
-        {
-            for (int s = 0; s < 2; s++)
-            {
-                res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-
-                // Initialise tmpSum for each (p,r,s) combination
                 for (auto &row : tmpSum)
                     std::fill(row.begin(), row.end(), Complex(0.0));
 
-                // Average noise up to imax (+ add diagonal when loops are different)
-                for (int imax = 1; imax <= Neta; imax++)
+                for (int i = 0; i < Neta; i++) // imax = i + 1
                 {
-                    const double norm = (!same_loop_noise)
-                                            ? (imax * imax)
-                                            : (imax > 1 ? (imax * (imax - 1)) : 1.0);
+                    DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
 
-                    int i = imax - 1;
+                    contract_D_half(qcl, qur, GdsG[r], half_lr_i);
+                    contract_D_half(qcr, qul, GdsG[s], half_rl_i);
+
                     for (int j = 0; j < i; j++)
                     {
-                        const auto &c1 =
-                            contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
-                        const auto &c2 =
-                            contract_D(half_lr[j + Neta * r], half_rl[i + Neta * s]);
+                        DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[j], p);
+                        contract_D_half(qcl, qur, GdsG[r], half_lr_j);
+                        contract_D_half(qcr, qul, GdsG[s], half_rl_j);
 
-                        // Symmetrize
-                        for (int t1 = 0; t1 < Nt; t1++)
-                        {
-                            for (int t2 = 0; t2 < Nt; t2++)
-                            {
-                                tmpSum[t1][t2] += c1[t1][t2] + c2[t1][t2];
-                            }
-                        }
+                        contract_D(half_lr_i, half_rl_j, tmpSum);
+                        contract_D(half_lr_j, half_rl_i, tmpSum);
                     }
                     if (!same_loop_noise)
                     {
-                        // Add diagonal term
-                        const auto &c_diag =
-                            contract_D(half_lr[i + Neta * r], half_rl[i + Neta * s]);
-                        for (int t1 = 0; t1 < Nt; t1++)
-                        {
-                            for (int t2 = 0; t2 < Nt; t2++)
-                            {
-                                tmpSum[t1][t2] += c_diag[t1][t2];
-                            }
-                        }
+                        // include diagonal term when loops use different noises
+                        contract_D(half_lr_i, half_rl_i, tmpSum);
                     }
+
+                    const double norm = (!same_loop_noise)
+                                            ? double((i + 1) * (i + 1))
+                                            : (i > 0 ? double((i + 1) * i) : 1.0);
+
                     for (int t1 = 0; t1 < Nt; t1++)
-                    {
                         for (int t2 = 0; t2 < Nt; t2++)
-                        {
                             tmpRes[t1][t2] = tmpSum[t1][t2] / norm;
-                        }
-                    }
-                    res.info.eta_max = std::to_string(imax);
-                    res.corr.clear();
+
+                    Result res;
+                    res.info.parity = (p == 0) ? "+" : "-";
+                    res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
+                    res.info.eta_max = std::to_string(i + 1);
                     res.corr = tmpRes;
                     result.push_back(res);
                 }
