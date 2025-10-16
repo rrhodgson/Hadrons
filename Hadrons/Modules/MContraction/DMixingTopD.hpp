@@ -200,11 +200,11 @@ void TDMixingTopD<FImpl>::setup(void)
 
     GridCartesian *grid = envGetGrid(FermionField);
 
-    envTmpLat(PropagatorField, "half_lr_i");
-    envTmpLat(PropagatorField, "half_rl_i");
-    envTmpLat(PropagatorField, "half_lr_j");
-    envTmpLat(PropagatorField, "half_rl_j");
-    // envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
+    const int Nt = env().getDim(Tdir);
+    envTmp(SlicedPropagator, "half_lr_i", 1, Nt);
+    envTmp(SlicedPropagator, "half_lr_j", 1, Nt);
+    envTmp(SlicedPropagator, "half_rl_i", 1, Nt);
+    envTmp(SlicedPropagator, "half_rl_j", 1, Nt);
     envTmpLat(PropagatorField, "GdsG");
 
     if (par().qLoop1 != par().qLoop2)
@@ -246,7 +246,6 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(SlicedPropagator, half_rl_i);
     envGetTmp(SlicedPropagator, half_lr_j);
     envGetTmp(SlicedPropagator, half_rl_j);
-    // envGetTmp(std::vector<PropagatorField>, GdsG);
     envGetTmp(PropagatorField, GdsG);
 
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
