@@ -187,6 +187,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
 
     int Nt = half_l.size();
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
+
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
@@ -256,12 +257,14 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(std::vector<SlicedPropagator>, half_r);
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
-    std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
-    std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> tmpRes(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> tmpSum(Nt, std::vector<Complex>(Nt, 0.));
+    std::vector<std::vector<Complex>> diagSum(Nt, std::vector<Complex>(Nt, 0.));
+
+    SlicedPropagator Lsum(Nt), Rsum(Nt);
 
     for (int p = 0; p < 2; p++)
     {
-
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
@@ -277,39 +280,37 @@ void TDMixingTopD<FImpl>::execute(void)
         {
             for (int s = 0; s < 2; s++)
             {
-                for (auto &row : tmpSum)
-                    std::fill(row.begin(), row.end(), Complex(0.0));
+                for (int t = 0; t < Nt; t++)
+                {
+                    Lsum[t] = Zero();
+                    Rsum[t] = Zero();
+                    if (same_loop_noise)
+                        std::fill(diagSum[t].begin(), diagSum[t].end(), Complex(0.0));
+                }
 
                 for (int i = 0; i < Neta; i++) // imax = i + 1
                 {
-                    for (int j = 0; j < i; j++)
-                    {
-                        const auto &c1 =
-                            contract_D(half_lr[i + Neta * r], half_rl[j + Neta * s]);
-                        const auto &c2 =
-                            contract_D(half_lr[j + Neta * r], half_rl[i + Neta * s]);
+                    const auto &Li = half_l[i + Neta * r];
+                    const auto &Ri = half_r[i + Neta * s];
 
-                        // Symmetrize
-                        for (int t1 = 0; t1 < Nt; t1++)
-                        {
-                            for (int t2 = 0; t2 < Nt; t2++)
-                            {
-                                tmpSum[t1][t2] += c1[t1][t2] + c2[t1][t2];
-                            }
-                        }
-                    }
-                    if (!same_loop_noise)
+                    // accumulate sums of Li, Ri
+                    for (int t = 0; t < Nt; t++)
                     {
-                        // Add diagonal term
-                        const auto &c_diag =
-                            contract_D(half_lr[i + Neta * r], half_rl[i + Neta * s]);
+                        Lsum[t] += Li[t];
+                        Rsum[t] += Ri[t];
+                    }
+                    tmpSum = contract_D(Lsum, Rsum);
+
+                    if (same_loop_noise)
+                    {
+                        // accumulate sum of diagonal terms & remove from total
+                        const auto &diag = contract_D(Li, Ri);
                         for (int t1 = 0; t1 < Nt; t1++)
-                        {
                             for (int t2 = 0; t2 < Nt; t2++)
                             {
-                                tmpSum[t1][t2] += c_diag[t1][t2];
+                                diagSum[t1][t2] += diag[t1][t2];
+                                tmpSum[t1][t2] -= diagSum[t1][t2];
                             }
-                        }
                     }
 
                     const double norm = (!same_loop_noise)
