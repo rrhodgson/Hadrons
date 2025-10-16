@@ -155,17 +155,17 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FIm
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
-    Gamma Gsrc = g5;
-
-    LatticeComplex tmp = trace(prop_c * Gsrc * g5 * adj(prop_u) * g5 * loop);
+    LatticeComplex tmp = trace(prop_c * adj(prop_u) * g5 * loop);
     SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
-    std::vector<Complex> ret2(ret.size());
-    for (unsigned int t = 0; t < env().getDim(Tdir); ++t)
+
+    const int Nt{env().getDim(Tdir)};
+    std::vector<Complex> out(Nt);
+    for (unsigned int t = 0; t < Nt; t++)
     {
-        ret2[t] = TensorRemove(ret[t]);
+        out[t] = TensorRemove(ret[t]);
     }
-    return ret2;
+    return out;
 };
 
 // setup ///////////////////////////////////////////////////////////////////////
@@ -174,7 +174,7 @@ void TDMixingTopC<FImpl>::setup(void)
 {
     GridCartesian *grid = envGetGrid(FermionField);
     envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
-    envTmpLat(ComplexField, "corr");
+
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
@@ -188,7 +188,6 @@ void TDMixingTopC<FImpl>::execute(void)
     LOG(Message) << "qLoop1  : " << par().qLoop1 << std::endl;
 
     std::vector<Result> result;
-    Result res;
 
     const int Nt{env().getDim(Tdir)};
     GridCartesian *grid = envGetGrid(FermionField);
@@ -198,25 +197,23 @@ void TDMixingTopC<FImpl>::execute(void)
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
 
     int Neta = ql1.size();
-    
+
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
     for (int p = 0; p < 2; p++)
     {
-        res.info.parity = (p == 0) ? "+" : "-";
-        
         for (int i = 0; i < Neta; i++)
         {
-            res.info.eta = std::to_string(i);
-
             // here one has to add ql2 if one wants them to be allowed to be different
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
 
             for (int r = 0; r < 2; r++)
             {
-                res.info.r = std::to_string(r + 1);    
+                Result res;
+                res.info.parity = (p == 0) ? "+" : "-";
+                res.info.eta = std::to_string(i);
+                res.info.r = std::to_string(r + 1);
 
-                res.corr.clear();
                 res.corr = contract_C_half(qcl, qul, GdsG[r]);
                 result.push_back(res);
             }
