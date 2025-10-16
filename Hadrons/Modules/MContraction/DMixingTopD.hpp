@@ -114,7 +114,7 @@ public:
     // bespoke subcontractions
     virtual SlicedPropagator contract_D_half(
         const PropagatorField &prop_c,
-        const PropagatorField &prop_u,
+        const PropagatorField &prop_u_adj,
         const PropagatorField &loop);
     virtual std::vector<std::vector<Complex>> contract_D(
         const SlicedPropagator &half_if,
@@ -167,33 +167,31 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(const TDMixingTopD<FImpl>::PropagatorField &prop_c, const TDMixingTopD<FImpl>::PropagatorField &prop_u, const TDMixingTopD<FImpl>::PropagatorField &loop)
+typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(
+    const TDMixingTopD<FImpl>::PropagatorField &prop_c,
+    const TDMixingTopD<FImpl>::PropagatorField &prop_u_adj,
+    const TDMixingTopD<FImpl>::PropagatorField &loop)
 {
-    Gamma g5(Gamma::Algebra::Gamma5);
-
-    PropagatorField tmp = g5 * adj(prop_u) * g5 * loop * prop_c;
+    PropagatorField tmp = prop_u_adj * loop * prop_c;
     SlicedPropagator out;
     sliceSum(tmp, out, Tp);
     return out;
 };
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(const typename TDMixingTopD<FImpl>::SlicedPropagator &half_lr, const typename TDMixingTopD<FImpl>::SlicedPropagator &half_rl)
+std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
+    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_l,
+    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_r)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
-    // Kept general in case anyone ever wants to play with this
-    Gamma Gsrc = g5;
-    Gamma Gsnk = Gsrc; // no conj on final interpolator for D-Dbar mixing
-
-    int Nt = half_lr.size();
-
+    int Nt = half_l.size();
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
         {
-            corr[t1][t2] = TensorRemove(trace(half_lr[t1] * Gsrc * half_rl[t2] * Gsnk));
+            corr[t1][t2] = TensorRemove(trace(half_l[t1] * g5 * half_r[t2] * g5));
         }
     }
 
@@ -211,8 +209,8 @@ void TDMixingTopD<FImpl>::setup(void)
     int Neta = ql1.size();
     const int Nt = env().getDim(Tdir);
 
-    envTmp(std::vector<SlicedPropagator>, "half_lr", 1, 2 * Neta, SlicedPropagator(Nt));
-    envTmp(std::vector<SlicedPropagator>, "half_rl", 1, 2 * Neta, SlicedPropagator(Nt));
+    envTmp(std::vector<SlicedPropagator>, "half_l", 1, 2 * Neta, SlicedPropagator(Nt));
+    envTmp(std::vector<SlicedPropagator>, "half_r", 1, 2 * Neta, SlicedPropagator(Nt));
     envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
 
     if (par().qLoop1 != par().qLoop2)
@@ -246,12 +244,16 @@ void TDMixingTopD<FImpl>::execute(void)
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
     auto &ql2 = envGet(std::vector<PropagatorField *>, par().qLoop2);
 
+    Gamma g5(Gamma::Algebra::Gamma5);
+    const PropagatorField qur_adj = g5 * adj(qur) * g5;
+    const PropagatorField qul_adj = g5 * adj(qul) * g5;
+
     // this is assuming both loops are identical
     int Neta = ql1.size();
     bool same_loop_noise = true;
 
-    envGetTmp(std::vector<SlicedPropagator>, half_lr);
-    envGetTmp(std::vector<SlicedPropagator>, half_rl);
+    envGetTmp(std::vector<SlicedPropagator>, half_l);
+    envGetTmp(std::vector<SlicedPropagator>, half_r);
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
@@ -266,8 +268,8 @@ void TDMixingTopD<FImpl>::execute(void)
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
             for (int r = 0; r < 2; r++)
             {
-                half_lr[i + Neta * r] = contract_D_half(qcl, qur, GdsG[r]);
-                half_rl[i + Neta * r] = contract_D_half(qcr, qul, GdsG[r]);
+                half_l[i + Neta * r] = contract_D_half(qcl, qur_adj, GdsG[r]);
+                half_r[i + Neta * r] = contract_D_half(qcr, qul_adj, GdsG[r]);
             }
         }
 
