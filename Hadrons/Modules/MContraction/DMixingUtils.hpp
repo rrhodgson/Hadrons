@@ -47,6 +47,11 @@ public:
         std::vector<PropagatorField> &out,
         const PropagatorField &prop,
         const int p);
+    static void GH_cap(
+        PropagatorField &out,
+        const PropagatorField &prop,
+        const int p,
+        const int r);
 };
 
 template <typename FImpl>
@@ -81,6 +86,30 @@ void DMixingUtils<FImpl>::GH_cap(
     {
         out[0] += GH * prop * parityG[p] * GH;
         out[1] += spId * GH * trace(prop * parityG[p] * GH);
+    }
+};
+
+template <typename FImpl>
+void DMixingUtils<FImpl>::GH_cap(
+    typename DMixingUtils<FImpl>::PropagatorField &out,
+    const typename DMixingUtils<FImpl>::PropagatorField &prop,
+    const int p,
+    const int r)
+{
+    assert(r == 0 || r == 1);
+
+    SitePropagator spId(1.0);
+    out = Zero();
+
+    if (r == 0)
+    {
+        for (const auto &GH : GHs)
+            out += GH * prop * parityG[p] * GH;
+    }
+    else
+    {
+        for (const auto &GH : GHs)
+            out += spId * GH * trace(prop * parityG[p] * GH);
     }
 };
 

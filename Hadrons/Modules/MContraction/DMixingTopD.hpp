@@ -117,8 +117,8 @@ public:
                                  const PropagatorField &loop,
                                  SlicedPropagator &out);
     virtual void contract_D(const SlicedPropagator &half_lr,
-                           const SlicedPropagator &half_rl,
-                           std::vector<std::vector<Complex>> &sum);
+                            const SlicedPropagator &half_rl,
+                            std::vector<std::vector<Complex>> &sum);
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -204,7 +204,8 @@ void TDMixingTopD<FImpl>::setup(void)
     envTmpLat(PropagatorField, "half_rl_i");
     envTmpLat(PropagatorField, "half_lr_j");
     envTmpLat(PropagatorField, "half_rl_j");
-    envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
+    // envTmp(std::vector<PropagatorField>, "GdsG", 1, 2, PropagatorField(env().getGrid()));
+    envTmpLat(PropagatorField, "GdsG");
 
     if (par().qLoop1 != par().qLoop2)
     {
@@ -245,7 +246,8 @@ void TDMixingTopD<FImpl>::execute(void)
     envGetTmp(SlicedPropagator, half_rl_i);
     envGetTmp(SlicedPropagator, half_lr_j);
     envGetTmp(SlicedPropagator, half_rl_j);
-    envGetTmp(std::vector<PropagatorField>, GdsG);
+    // envGetTmp(std::vector<PropagatorField>, GdsG);
+    envGetTmp(PropagatorField, GdsG);
 
     std::vector<std::vector<Complex>> tmpRes = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<std::vector<Complex>> tmpSum = std::vector<std::vector<Complex>>(Nt, std::vector<Complex>(Nt, 0.));
@@ -261,16 +263,19 @@ void TDMixingTopD<FImpl>::execute(void)
 
                 for (int i = 0; i < Neta; i++) // imax = i + 1
                 {
-                    DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
+                    DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p, r);
+                    contract_D_half(qcl, qur, GdsG, half_lr_i);
 
-                    contract_D_half(qcl, qur, GdsG[r], half_lr_i);
-                    contract_D_half(qcr, qul, GdsG[s], half_rl_i);
+                    DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p, s);
+                    contract_D_half(qcr, qul, GdsG, half_rl_i);
 
                     for (int j = 0; j < i; j++)
                     {
-                        DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[j], p);
-                        contract_D_half(qcl, qur, GdsG[r], half_lr_j);
-                        contract_D_half(qcr, qul, GdsG[s], half_rl_j);
+                        DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[j], p, r);
+                        contract_D_half(qcl, qur, GdsG, half_lr_j);
+
+                        DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[j], p, s);
+                        contract_D_half(qcr, qul, GdsG, half_rl_j);
 
                         contract_D(half_lr_i, half_rl_j, tmpSum);
                         contract_D(half_lr_j, half_rl_i, tmpSum);
