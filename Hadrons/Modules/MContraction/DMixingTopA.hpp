@@ -111,9 +111,7 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual SlicedPropagator contractA_half_l(const PropagatorField &GcuG, const std::vector<Coordinate *> &xs);
-    virtual std::vector<SlicedPropagator> contractA_half_r(const PropagatorField &GcuG, const std::vector<PropagatorField *> &ds_prop_pt);
-    virtual std::vector<std::vector<Complex>> contractA(const SlicedPropagator &A, const std::vector<SlicedPropagator> &B);
+    virtual std::vector<std::vector<Complex>> contract_A(const PropagatorField &GcuGl, const PropagatorField &GcuGr, const std::vector<Coordinate *> &xs, const std::vector<PropagatorField *> &ds_prop_pt);
 };
 
 MODULE_REGISTER_TMP(DMixingTopA, TDMixingTopA<FIMPL>, MContraction);
@@ -161,54 +159,33 @@ std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-typename TDMixingTopA<FImpl>::SlicedPropagator TDMixingTopA<FImpl>::contractA_half_l(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<Coordinate *> &xs)
+std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
+    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_l,
+    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_r,
+    const std::vector<Coordinate *> &xs,
+    const std::vector<typename TDMixingTopA<FImpl>::PropagatorField *> &ds_prop_pt)
 {
-    int Nt = GcuG.Grid()->_fdimensions[3];
-    SlicedPropagator A(Nt);
-
-    for (int t1 = 0; t1 < Nt; t1++)
-    {
-        A[t1] = peekSite(GcuG, *xs[t1]);
-    }
-
-    return A;
-}
-
-template <typename FImpl>
-std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> TDMixingTopA<FImpl>::contractA_half_r(const TDMixingTopA<FImpl>::PropagatorField &GcuG, const std::vector<typename TDMixingTopA<FImpl>::PropagatorField *> &ds_prop_pt)
-{
-    int Nt = GcuG.Grid()->_fdimensions[3];
+    int Nt = GcuG_l.Grid()->_fdimensions[3];
     Gamma g5(Gamma::Algebra::Gamma5);
-    std::vector<SlicedPropagator> B(Nt, SlicedPropagator(Nt));
-    SlicedPropagator buf;
-
-    for (int t1 = 0; t1 < Nt; t1++)
-    {
-        const auto &ds = *ds_prop_pt[t1];
-        PropagatorField tmp = g5 * adj(ds) * g5 * GcuG * ds;
-        sliceSum(tmp, buf, Tp);
-        for (int t2 = 0; t2 < Nt; t2++)
-        {
-            B[t1][t2] = buf[t2];
-        }
-    }
-
-    return B;
-}
-
-template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contractA(const typename TDMixingTopA<FImpl>::SlicedPropagator &A, const std::vector<typename TDMixingTopA<FImpl>::SlicedPropagator> &B)
-{
-    int Nt = A.size();
-
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
+
+    SlicedPropagator B;
+    B.reserve(Nt);
+
     for (int t1 = 0; t1 < Nt; t1++)
     {
+        const auto A = peekSite(GcuG_l, *xs[t1]);
+
+        const auto &ds = *ds_prop_pt[t1];
+        const auto dsD = g5 * adj(ds) * g5;
+
+        PropagatorField tmp = dsD * GcuG_r * ds;
+        sliceSum(tmp, B, Tp);
+
         for (int t2 = 0; t2 < Nt; t2++)
-        {
-            corr[t1][t2] = TensorRemove(trace(A[t1] * B[t1][t2]));
-        }
+            corr[t1][t2] = TensorRemove(trace(A * B[t2]));
     }
+
     return corr;
 }
 
@@ -220,9 +197,8 @@ void TDMixingTopA<FImpl>::setup(void)
     envTmpLat(PropagatorField, "qcur");
     envTmp(std::vector<PropagatorField>, "GcuG_l", 1, 2, PropagatorField(env().getGrid()));
     envTmp(std::vector<PropagatorField>, "GcuG_r", 1, 2, PropagatorField(env().getGrid()));
-    const int Nt{env().getDim(Tdir)};
-    envTmp(std::vector<SlicedPropagator>, "half_l", 1, 2, SlicedPropagator(Nt));
-    envTmp(std::vector<std::vector<SlicedPropagator>>, "half_r", 1, 2, std::vector<SlicedPropagator>(Nt, SlicedPropagator(Nt)));
+    envTmpLat(PropagatorField, "half_l");
+    envTmpLat(PropagatorField, "half_r");
 
     envCreate(HadronsSerializable, getName(), 1, 0);
 }
@@ -240,7 +216,6 @@ void TDMixingTopA<FImpl>::execute(void)
     LOG(Message) << "points  : " << par().points << std::endl;
 
     std::vector<Result> result;
-    Result res;
 
     const int Nt{env().getDim(Tdir)};
     GridCartesian *grid = envGetGrid(FermionField);
@@ -249,20 +224,20 @@ void TDMixingTopA<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi = envGet(std::vector<PropagatorField *>, par().qInt);
-    auto &points = envGet(std::vector<Coordinate *>, par().points);
+    auto &qin = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &pts = envGet(std::vector<Coordinate *>, par().points);
 
     envGetTmp(PropagatorField, qcul);
     envGetTmp(PropagatorField, qcur);
     envGetTmp(std::vector<PropagatorField>, GcuG_l);
     envGetTmp(std::vector<PropagatorField>, GcuG_r);
-    envGetTmp(std::vector<SlicedPropagator>, half_l);
-    envGetTmp(std::vector<std::vector<SlicedPropagator>>, half_r);
+    envGetTmp(PropagatorField, half_l);
+    envGetTmp(PropagatorField, half_r);
 
     Gamma g5(Gamma::Algebra::Gamma5);
 
-    qcul = qcl * g5 * g5 * adj(qul) * g5;
-    qcur = qcr * g5 * g5 * adj(qur) * g5;
+    qcul = qcl * adj(qul) * g5; // qcl * g5 * (g5 * adj(qul) * g5)
+    qcur = qcr * adj(qur) * g5; // qcr * g5 * (g5 * adj(qur) * g5)
 
     // parity +, parity -  (multiplying from left)
     const auto &GHpar = DMixingUtils<FImpl>::parityG;
@@ -272,21 +247,19 @@ void TDMixingTopA<FImpl>::execute(void)
 
     for (int p = 0; p < 2; p++)
     {
-        res.info.parity = (p == 0) ? "+" : "-";
+        for (int r = 0; r < 2; r++)
+        {
+            half_l = GHpar[p] * GcuG_l[r];
 
-        for (int r = 0; r < 2; r++)
-        {
-            half_l[r] = contractA_half_l(GHpar[p] * GcuG_l[r], points);
-            half_r[r] = contractA_half_r(GHpar[p] * GcuG_r[r], qi);
-        }
-        for (int r = 0; r < 2; r++)
-        {
             for (int s = 0; s < 2; s++)
             {
+                half_r = GHpar[p] * GcuG_r[s];
+
+                Result res;
+                res.info.parity = (p == 0) ? "+" : "-";
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
 
-                res.corr.clear();
-                res.corr = contractA(half_l[r], half_r[s]);
+                res.corr = contract_A(half_l, half_r, pts, qin);
                 result.push_back(res);
             }
         }
