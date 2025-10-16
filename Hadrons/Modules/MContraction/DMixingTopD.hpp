@@ -252,9 +252,9 @@ void TDMixingTopD<FImpl>::execute(void)
 
     for (int p = 0; p < 2; p++)
     {
-        for (int r = 0; r < 2; ++r)
+        for (int r = 0; r < 2; r++)
         {
-            for (int s = 0; s < 2; ++s)
+            for (int s = 0; s < 2; s++)
             {
                 for (auto &row : tmpSum)
                     std::fill(row.begin(), row.end(), Complex(0.0));
