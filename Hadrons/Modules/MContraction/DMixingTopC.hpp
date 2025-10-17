@@ -105,7 +105,10 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<Complex> contract_C_half(const PropagatorField &prop_c, const PropagatorField &prop_u, const PropagatorField &loop);
+    virtual std::vector<Complex> contract_C_half(
+        const PropagatorField &prop_c,
+        const PropagatorField &prop_u_adj,
+        const PropagatorField &loop);
 };
 
 MODULE_REGISTER_TMP(DMixingTopC, TDMixingTopC<FIMPL>, MContraction);
@@ -151,11 +154,14 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(const TDMixingTopC<FImpl>::PropagatorField &prop_c, const TDMixingTopC<FImpl>::PropagatorField &prop_u, const TDMixingTopC<FImpl>::PropagatorField &loop)
+std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(
+    const TDMixingTopC<FImpl>::PropagatorField &prop_c,
+    const TDMixingTopC<FImpl>::PropagatorField &prop_u_adj,
+    const TDMixingTopC<FImpl>::PropagatorField &loop)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
-    LatticeComplex tmp = trace(prop_c * adj(prop_u) * g5 * loop);
+    LatticeComplex tmp = trace(prop_c * g5 * prop_u_adj * loop);
     SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
 
@@ -196,6 +202,9 @@ void TDMixingTopC<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &ql1 = envGet(std::vector<PropagatorField *>, par().qLoop1);
 
+    Gamma g5(Gamma::Algebra::Gamma5);
+    const PropagatorField qul_adj = g5 * adj(qul) * g5;
+
     int Neta = ql1.size();
 
     envGetTmp(std::vector<PropagatorField>, GdsG);
@@ -214,7 +223,7 @@ void TDMixingTopC<FImpl>::execute(void)
                 res.info.eta = std::to_string(i);
                 res.info.r = std::to_string(r + 1);
 
-                res.corr = contract_C_half(qcl, qul, GdsG[r]);
+                res.corr = contract_C_half(qcl, qul_adj, GdsG[r]);
                 result.push_back(res);
             }
         }
