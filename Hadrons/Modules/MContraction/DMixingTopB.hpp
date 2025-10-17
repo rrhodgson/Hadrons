@@ -111,7 +111,16 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<std::vector<Complex>> contract_B(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField *> &ds_prop_pt, const std::vector<Coordinate *> &xs, const int p, const int rL, const int rR);
+    virtual std::vector<std::vector<Complex>> contract_B(
+        const PropagatorField &ci,
+        const PropagatorField &ui,
+        const PropagatorField &cf,
+        const PropagatorField &uf,
+        const std::vector<PropagatorField *> &ds_prop_pt,
+        const std::vector<Coordinate *> &xs,
+        const int p,
+        const int rL,
+        const int rR);
 };
 
 MODULE_REGISTER_TMP(DMixingTopB, TDMixingTopB<FIMPL>, MContraction);
@@ -223,8 +232,8 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH1 : GHs)
             {
-                const auto trA = ds * parity * GH1 * cui;
-                const auto trB = cuf * GH1 * dsD;
+                PropagatorField trA = ds * parity * GH1 * cui;
+                PropagatorField trB = cuf * GH1 * dsD;
                 same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
             }
         }
@@ -232,8 +241,8 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH1 : GHs)
             {
-                const auto trA = cuf * GH1 * cui;
-                const auto trB = ds * parity * GH1 * dsD;
+                PropagatorField trA = cuf * GH1 * cui;
+                PropagatorField trB = ds * parity * GH1 * dsD;
                 same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
             }
         }
