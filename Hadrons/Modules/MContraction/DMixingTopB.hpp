@@ -194,8 +194,8 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
-        const auto &ds = *ds_prop_pt[t1];
-        const auto dsD = g5 * adj(ds) * g5;
+        const PropagatorField &ds = *ds_prop_pt[t1];
+        const PropagatorField dsD = g5 * adj(ds) * g5;
 
         const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
         const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
