@@ -111,7 +111,16 @@ public:
     // execution
     virtual void execute(void);
     // bespoke subcontractions
-    virtual std::vector<std::vector<Complex>> contractB(const PropagatorField &ci, const PropagatorField &ui, const PropagatorField &cf, const PropagatorField &uf, const std::vector<PropagatorField *> &ds_prop_pt, const std::vector<Coordinate *> &xs, const int p, const int rL, const int rR);
+    virtual std::vector<std::vector<Complex>> contract_B(
+        const PropagatorField &ci,
+        const PropagatorField &ui,
+        const PropagatorField &cf,
+        const PropagatorField &uf,
+        const std::vector<PropagatorField *> &ds_prop_pt,
+        const std::vector<Coordinate *> &xs,
+        const int p,
+        const int rL,
+        const int rR);
 };
 
 MODULE_REGISTER_TMP(DMixingTopB, TDMixingTopB<FIMPL>, MContraction);
@@ -159,7 +168,7 @@ std::vector<std::string> TDMixingTopB<FImpl>::getOutputFiles(void)
 }
 
 template <typename FImpl>
-std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
+std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
     const TDMixingTopB<FImpl>::PropagatorField &ci,
     const TDMixingTopB<FImpl>::PropagatorField &ui,
     const TDMixingTopB<FImpl>::PropagatorField &cf,
@@ -175,50 +184,63 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contractB(
 
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<TComplex> buf;
+    buf.reserve(Nt);
 
     const auto &GHs = DMixingUtils<FImpl>::GHs;
     const auto &GHpar = DMixingUtils<FImpl>::parityG;
+    const Gamma parity = GHpar[p];
 
-    const bool same_r = rR == rL;
+    const bool same_r = (rR == rL);
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
-
-        const auto &ds = *ds_prop_pt[t1];
+        const PropagatorField &ds = *ds_prop_pt[t1];
         const PropagatorField dsD = g5 * adj(ds) * g5;
 
         const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
         const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
 
-        for (const auto &GH1 : GHs)
+        // product of traces
+        auto tr_same = [&](const auto &trA, const auto &trB)
         {
-            const PropagatorField trA = (rL == 0)
-                                            ? PropagatorField(ds * GHpar[p] * GH1 * cui)
-                                            : PropagatorField(cuf * GH1 * cui);
-
-            const PropagatorField trB = (rL == 0)
-                                            ? PropagatorField(cuf * GH1 * dsD)
-                                            : PropagatorField(ds * GHpar[p] * GH1 * dsD);
-
-            if (same_r) // product of traces
+            for (const auto &GH2 : GHs)
             {
-                for (const auto &GH2 : GHs)
-                {
-                    LatticeComplex tmp = trace(trA * GH2) * trace(trB * GHpar[p] * GH2);
-                    sliceSum(tmp, buf, Tp);
-                    for (int t2 = 0; t2 < Nt; ++t2)
-                        corr[t1][t2] += TensorRemove(buf[t2]);
-                }
+                LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
+                sliceSum(tmp, buf, Tp);
+                auto &row = corr[t1];
+                for (int t2 = 0; t2 < Nt; t2++)
+                    row[t2] += TensorRemove(buf[t2]);
             }
-            else // trace of product
+        };
+        // trace of product
+        auto tr_diff = [&](const auto &trA, const auto &trB)
+        {
+            for (const auto &GH2 : GHs)
             {
-                for (const auto &GH2 : GHs)
-                {
-                    LatticeComplex tmp = trace(trA * GH2 * trB * GHpar[p] * GH2);
-                    sliceSum(tmp, buf, Tp);
-                    for (int t2 = 0; t2 < Nt; ++t2)
-                        corr[t1][t2] += TensorRemove(buf[t2]);
-                }
+                LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
+                sliceSum(tmp, buf, Tp);
+                auto &row = corr[t1];
+                for (int t2 = 0; t2 < Nt; t2++)
+                    row[t2] += TensorRemove(buf[t2]);
+            }
+        };
+
+        if (rL == 0)
+        {
+            for (const auto &GH1 : GHs)
+            {
+                PropagatorField trA = ds * parity * GH1 * cui;
+                PropagatorField trB = cuf * GH1 * dsD;
+                same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
+            }
+        }
+        else
+        {
+            for (const auto &GH1 : GHs)
+            {
+                PropagatorField trA = cuf * GH1 * cui;
+                PropagatorField trB = ds * parity * GH1 * dsD;
+                same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
             }
         }
     }
@@ -246,29 +268,25 @@ void TDMixingTopB<FImpl>::execute(void)
     LOG(Message) << "points  : " << par().points << std::endl;
 
     std::vector<Result> result;
-    Result res;
-
-    const int Nt{env().getDim(Tdir)};
 
     auto &qul = envGet(PropagatorField, par().qULeft);
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &qi = envGet(std::vector<PropagatorField *>, par().qInt);
-    auto &points = envGet(std::vector<Coordinate *>, par().points);
+    auto &qin = envGet(std::vector<PropagatorField *>, par().qInt);
+    auto &pts = envGet(std::vector<Coordinate *>, par().points);
 
     for (int p = 0; p < 2; p++)
     {
-        res.info.parity = (p == 0) ? "+" : "-";
-
         for (int r = 0; r < 2; r++)
         {
             for (int s = 0; s < 2; s++)
             {
+                Result res;
+                res.info.parity = (p == 0) ? "+" : "-";
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
 
-                res.corr.clear();
-                res.corr = contractB(qcl, qul, qcr, qur, qi, points, p, r, s);
+                res.corr = contract_B(qcl, qul, qcr, qur, qin, pts, p, r, s);
                 result.push_back(res);
             }
         }
