@@ -42,13 +42,15 @@ class DMixingUtils
 public:
     FERM_TYPE_ALIASES(FImpl, );
     /*     OpStruct
-     * \   /      \    /
-     *  \ /        \  /
-     *   *          **
-     *   *         /  \
-     *  / \       /    \
-     * /   \    
-     *  One        Two
+     * c     q    c      q
+     *  \   /      \    /
+     *   \ /        \  /
+     *    *          **
+     *    *         /  \
+     *   / \       /    \
+     *  /   \     /      \ 
+     * u     q   u        q
+     *   One        Two
     */
     enum OpStruct {
         One=0,
