@@ -86,7 +86,6 @@ public:
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
                                         int        , r,
-                                        int        , s,
                                         std::string, parity,
                                         int        , eta);
     };
