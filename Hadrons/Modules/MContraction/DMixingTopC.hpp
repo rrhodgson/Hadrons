@@ -167,9 +167,14 @@ std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
+    startTimer("trace");
     LatticeComplex tmp = trace(prop_c * g5 * prop_u_adj * loop);
+    stopTimer("trace");
+
+    startTimer("sliceSum");
     SlicedComplex ret;
     sliceSum(tmp, ret, Tp);
+    stopTimer("sliceSum");
 
     const int Nt{env().getDim(Tdir)};
     std::vector<Complex> out(Nt);
@@ -230,9 +235,7 @@ void TDMixingTopC<FImpl>::execute(void)
                 res.info.eta = std::to_string(i);
                 res.info.r = std::to_string(r + 1);
 
-                startTimer("contract_C_half");
                 res.corr = contract_C_half(qcl, qul_adj, GdsG[r]);
-                stopTimer("contract_C_half");
                 result.push_back(res);
             }
         }
