@@ -224,7 +224,6 @@ void TDMixingTopA<FImpl>::execute(void)
     std::vector<Result> result;
 
     const int Nt{env().getDim(Tdir)};
-    GridCartesian *grid = envGetGrid(FermionField);
 
     auto &qul = envGet(PropagatorField, par().qULeft);
     auto &qcl = envGet(PropagatorField, par().qCLeft);

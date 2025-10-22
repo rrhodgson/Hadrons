@@ -320,7 +320,7 @@ void TDMixingTopD<FImpl>::execute(void)
                     {
                         // accumulate sum of diagonal terms & remove from total
                         startTimer("contract_D");
-                        const auto &diag = contract_D(Li, Ri);
+                        const auto diag = contract_D(Li, Ri);
                         stopTimer("contract_D");
                         for (int t1 = 0; t1 < Nt; t1++)
                             for (int t2 = 0; t2 < Nt; t2++)
