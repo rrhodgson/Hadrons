@@ -97,6 +97,12 @@ public:
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
 
+    using Parity   = typename DMixingUtils<FImpl>::Parity;
+    using OpStruct = typename DMixingUtils<FImpl>::OpStruct;
+
+    const std::array<Gamma,8> &GHs     = DMixingUtils<FImpl>::GHs;
+    const std::array<Gamma,2> &parityG = DMixingUtils<FImpl>::parityG;
+
 public:
     // constructor
     TDMixingTopA(const std::string name);
@@ -160,12 +166,12 @@ std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
 
 template <typename FImpl>
 std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
-    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_l,
-    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_r,
+    const PropagatorField &GcuG_l,
+    const PropagatorField &GcuG_r,
     const std::vector<Coordinate *> &xs,
-    const std::vector<typename TDMixingTopA<FImpl>::PropagatorField *> &ds_prop_pt)
+    const std::vector<PropagatorField *> &ds_prop_pt)
 {
-    int Nt = GcuG_l.Grid()->_fdimensions[3];
+    int Nt = env().getDim(Tdir);
     Gamma g5(Gamma::Algebra::Gamma5);
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
 
@@ -239,26 +245,23 @@ void TDMixingTopA<FImpl>::execute(void)
     qcul = qcl * adj(qul) * g5; // qcl * g5 * (g5 * adj(qul) * g5)
     qcur = qcr * adj(qur) * g5; // qcr * g5 * (g5 * adj(qur) * g5)
 
-    // parity +, parity -  (multiplying from left)
-    const auto &GHpar = DMixingUtils<FImpl>::parityG;
-
     startTimer("GH_cap");
-    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, 0);
-    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, 0);
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Parity::Pos);
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Parity::Pos);
     stopTimer("GH_cap");
 
-    for (int p = 0; p < 2; p++)
+    for (const auto p : {Parity::Pos,Parity::Neg})
     {
-        for (int r = 0; r < 2; r++)
+        for (const auto r : {OpStruct::One,OpStruct::Two})
         {
-            half_l = GHpar[p] * GcuG_l[r];
+            half_l = parityG[p] * GcuG_l[r];
 
-            for (int s = 0; s < 2; s++)
+            for (const auto s : {OpStruct::One,OpStruct::Two})
             {
-                half_r = GHpar[p] * GcuG_r[s];
+                half_r = parityG[p] * GcuG_r[s];
 
                 Result res;
-                res.info.parity = (p == 0) ? "+" : "-";
+                res.info.parity = (p == Parity::Pos) ? "+" : "-";
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
 
                 startTimer("contract_A");

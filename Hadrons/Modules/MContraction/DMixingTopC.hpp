@@ -91,6 +91,12 @@ public:
     };
     typedef Correlator<Metadata, Complex> Result;
 
+    using Parity   = typename DMixingUtils<FImpl>::Parity;
+    using OpStruct = typename DMixingUtils<FImpl>::OpStruct;
+
+    const std::array<Gamma,8> &GHs     = DMixingUtils<FImpl>::GHs;
+    const std::array<Gamma,2> &parityG = DMixingUtils<FImpl>::parityG;
+
 public:
     // constructor
     TDMixingTopC(const std::string name);
@@ -155,9 +161,9 @@ std::vector<std::string> TDMixingTopC<FImpl>::getOutputFiles(void)
 
 template <typename FImpl>
 std::vector<Complex> TDMixingTopC<FImpl>::contract_C_half(
-    const TDMixingTopC<FImpl>::PropagatorField &prop_c,
-    const TDMixingTopC<FImpl>::PropagatorField &prop_u_adj,
-    const TDMixingTopC<FImpl>::PropagatorField &loop)
+    const PropagatorField &prop_c,
+    const PropagatorField &prop_u_adj,
+    const PropagatorField &loop)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
@@ -209,19 +215,18 @@ void TDMixingTopC<FImpl>::execute(void)
 
     envGetTmp(std::vector<PropagatorField>, GdsG);
 
-    for (int p = 0; p < 2; p++)
+    for (const auto p : {Parity::Pos,Parity::Neg})
     {
         for (int i = 0; i < Neta; i++)
         {
-            // here one has to add ql2 if one wants them to be allowed to be different
             startTimer("GH_cap");
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
             stopTimer("GH_cap");
 
-            for (int r = 0; r < 2; r++)
+            for (const auto r : {OpStruct::One,OpStruct::Two})
             {
                 Result res;
-                res.info.parity = (p == 0) ? "+" : "-";
+                res.info.parity = (p == Parity::Pos) ? "+" : "-";
                 res.info.eta = std::to_string(i);
                 res.info.r = std::to_string(r + 1);
 

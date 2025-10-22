@@ -41,17 +41,34 @@ class DMixingUtils
 {
 public:
     FERM_TYPE_ALIASES(FImpl, );
+    /*     OpStruct
+     * \   /      \    /
+     *  \ /        \  /
+     *   *          **
+     *   *         /  \
+     *  / \       /    \
+     * /   \    
+     *  One        Two
+    */
+    enum OpStruct {
+        One=0,
+        Two=1
+    };
+    enum Parity {
+        Pos=0,
+        Neg=1
+    };
     static const std::array<Gamma, 8> GHs;
     static const std::array<Gamma, 2> parityG;
     static void GH_cap(
         std::vector<PropagatorField> &out,
         const PropagatorField &prop,
-        const int p);
+        const Parity p);
     static void GH_cap(
         PropagatorField &out,
         const PropagatorField &prop,
-        const int p,
-        const int r);
+        const Parity p,
+        const OpStruct r);
 };
 
 template <typename FImpl>
@@ -63,53 +80,58 @@ const std::array<Gamma, 8> DMixingUtils<FImpl>::GHs = {
     Gamma(Gamma::Algebra::GammaXGamma5),
     Gamma(Gamma::Algebra::GammaYGamma5),
     Gamma(Gamma::Algebra::GammaZGamma5),
-    Gamma(Gamma::Algebra::GammaTGamma5)};
+    Gamma(Gamma::Algebra::GammaTGamma5)
+};
 
 template <typename FImpl>
 const std::array<Gamma, 2> DMixingUtils<FImpl>::parityG = {
     Gamma(Gamma::Algebra::Identity),
-    Gamma(Gamma::Algebra::Gamma5)};
+    Gamma(Gamma::Algebra::Gamma5)
+};
 
 template <typename FImpl>
 void DMixingUtils<FImpl>::GH_cap(
-    std::vector<typename DMixingUtils<FImpl>::PropagatorField> &out,
-    const typename DMixingUtils<FImpl>::PropagatorField &prop,
-    const int p)
+    std::vector<PropagatorField> &out,
+    const PropagatorField &prop,
+    const Parity p)
 {
     assert(out.size() == 2);
 
     SitePropagator spId(1.0);
-    out[0] = Zero();
-    out[1] = Zero();
+    out[OpStruct::One] = Zero();
+    out[OpStruct::Two] = Zero();
 
     for (const auto &GH : GHs)
     {
-        out[0] += GH * prop * parityG[p] * GH;
-        out[1] += spId * GH * trace(prop * parityG[p] * GH);
+        out[OpStruct::One] += GH * prop * parityG[p] * GH;
+        out[OpStruct::Two] += spId * GH * trace(prop * parityG[p] * GH);
     }
 };
 
 template <typename FImpl>
 void DMixingUtils<FImpl>::GH_cap(
-    typename DMixingUtils<FImpl>::PropagatorField &out,
-    const typename DMixingUtils<FImpl>::PropagatorField &prop,
-    const int p,
-    const int r)
+    PropagatorField &out,
+    const PropagatorField &prop,
+    const Parity p,
+    const OpStruct r)
 {
-    assert(r == 0 || r == 1);
-
     SitePropagator spId(1.0);
     out = Zero();
 
-    if (r == 0)
+    switch (r)
     {
-        for (const auto &GH : GHs)
-            out += GH * prop * parityG[p] * GH;
-    }
-    else
-    {
-        for (const auto &GH : GHs)
-            out += spId * GH * trace(prop * parityG[p] * GH);
+        case OpStruct::One:
+            for (const auto &GH : GHs)
+                out += GH * prop * parityG[p] * GH;
+            break;
+
+        case OpStruct::Two:
+            for (const auto &GH : GHs)
+                out += spId * GH * trace(prop * parityG[p] * GH);
+            break;
+
+        default:
+            HADRONS_ERROR(Argument, "DMixingUtils: Invalid RS value");
     }
 };
 
