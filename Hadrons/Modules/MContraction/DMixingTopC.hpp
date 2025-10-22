@@ -214,7 +214,9 @@ void TDMixingTopC<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
+            startTimer("GH_cap");
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
+            stopTimer("GH_cap");
 
             for (int r = 0; r < 2; r++)
             {
@@ -223,7 +225,9 @@ void TDMixingTopC<FImpl>::execute(void)
                 res.info.eta = std::to_string(i);
                 res.info.r = std::to_string(r + 1);
 
+                startTimer("contract_C_half");
                 res.corr = contract_C_half(qcl, qul_adj, GdsG[r]);
+                stopTimer("contract_C_half");
                 result.push_back(res);
             }
         }

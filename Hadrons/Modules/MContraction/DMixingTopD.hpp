@@ -268,11 +268,15 @@ void TDMixingTopD<FImpl>::execute(void)
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
+            startTimer("GH_cap");
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
+            stopTimer("GH_cap");
             for (int r = 0; r < 2; r++)
             {
+                startTimer("contract_D_half");
                 half_l[i + Neta * r] = contract_D_half(qcl, qur_adj, GdsG[r]);
                 half_r[i + Neta * r] = contract_D_half(qcr, qul_adj, GdsG[r]);
+                stopTimer("contract_D_half");
             }
         }
 
@@ -299,12 +303,16 @@ void TDMixingTopD<FImpl>::execute(void)
                         Lsum[t] += Li[t];
                         Rsum[t] += Ri[t];
                     }
+                    startTimer("contract_D");
                     tmpSum = contract_D(Lsum, Rsum);
+                    stopTimer("contract_D");
 
                     if (same_loop_noise)
                     {
                         // accumulate sum of diagonal terms & remove from total
+                        startTimer("contract_D");
                         const auto &diag = contract_D(Li, Ri);
+                        stopTimer("contract_D");
                         for (int t1 = 0; t1 < Nt; t1++)
                             for (int t2 = 0; t2 < Nt; t2++)
                             {

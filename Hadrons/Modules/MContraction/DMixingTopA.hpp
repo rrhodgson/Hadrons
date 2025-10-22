@@ -242,8 +242,10 @@ void TDMixingTopA<FImpl>::execute(void)
     // parity +, parity -  (multiplying from left)
     const auto &GHpar = DMixingUtils<FImpl>::parityG;
 
+    startTimer("GH_cap");
     DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, 0);
     DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, 0);
+    stopTimer("GH_cap");
 
     for (int p = 0; p < 2; p++)
     {
@@ -259,7 +261,10 @@ void TDMixingTopA<FImpl>::execute(void)
                 res.info.parity = (p == 0) ? "+" : "-";
                 res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
 
+                startTimer("contract_A");
                 res.corr = contract_A(half_l, half_r, pts, qin);
+                stopTimer("contract_A");
+
                 result.push_back(res);
             }
         }

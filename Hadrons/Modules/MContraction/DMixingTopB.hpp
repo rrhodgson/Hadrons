@@ -205,8 +205,14 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH2 : GHs)
             {
+                startTimer("trace");
                 LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
+                stopTimer("trace");
+
+                startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
                 auto &row = corr[t1];
                 for (int t2 = 0; t2 < Nt; t2++)
                     row[t2] += TensorRemove(buf[t2]);
@@ -217,8 +223,14 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH2 : GHs)
             {
+                startTimer("trace");
                 LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
+                stopTimer("trace");
+
+                startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
                 auto &row = corr[t1];
                 for (int t2 = 0; t2 < Nt; t2++)
                     row[t2] += TensorRemove(buf[t2]);
@@ -229,8 +241,10 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH1 : GHs)
             {
+                startTimer("trA & trB");
                 PropagatorField trA = ds * parity * GH1 * cui;
                 PropagatorField trB = cuf * GH1 * dsD;
+                stopTimer("trA & trB");
                 same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
             }
         }
@@ -238,8 +252,10 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH1 : GHs)
             {
+                startTimer("trA & trB");
                 PropagatorField trA = cuf * GH1 * cui;
                 PropagatorField trB = ds * parity * GH1 * dsD;
+                stopTimer("trA & trB");
                 same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
             }
         }
