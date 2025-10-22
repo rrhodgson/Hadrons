@@ -266,7 +266,7 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
                 break;
 
             default:
-                HADRONS_ERROR(Argument, "DMixingTopB: Invalid RS value");
+                HADRONS_ERROR(Argument, "DMixingTopB: Invalid OpStruct value");
         }
     }
 

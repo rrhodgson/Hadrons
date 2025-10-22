@@ -131,7 +131,7 @@ void DMixingUtils<FImpl>::GH_cap(
             break;
 
         default:
-            HADRONS_ERROR(Argument, "DMixingUtils: Invalid RS value");
+            HADRONS_ERROR(Argument, "DMixingUtils: Invalid OpStruct value");
     }
 };
 
