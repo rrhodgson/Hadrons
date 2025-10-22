@@ -92,9 +92,10 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        std::string, rr,
+                                        int        , r,
+                                        int        , s,
                                         std::string, parity,
-                                        std::string, eta_max);
+                                        int        , eta_max);
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
 
@@ -301,8 +302,10 @@ void TDMixingTopD<FImpl>::execute(void)
                         std::fill(diagSum[t].begin(), diagSum[t].end(), Complex(0.0));
                 }
 
-                for (int i = 0; i < Neta; i++) // imax = i + 1
+                for (int i = 0; i < Neta; i++)
                 {
+                    int eta_max = i + 1;
+
                     const auto &Li = half_l[half_idx(r,i,Neta)];
                     const auto &Ri = half_r[half_idx(s,i,Neta)];
 
@@ -339,9 +342,11 @@ void TDMixingTopD<FImpl>::execute(void)
                             tmpRes[t1][t2] = tmpSum[t1][t2] / norm;
 
                     Result res;
-                    res.info.parity = (p == Parity::Pos) ? "+" : "-";
-                    res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                    res.info.eta_max = std::to_string(i + 1);
+                    res.info.parity  = DMixingUtils<FImpl>::toString(p);
+                    res.info.r       = DMixingUtils<FImpl>::toInt(r);
+                    res.info.s       = DMixingUtils<FImpl>::toInt(s);
+                    res.info.eta_max = eta_max;
+                    
                     res.corr = tmpRes;
                     result.push_back(res);
                 }

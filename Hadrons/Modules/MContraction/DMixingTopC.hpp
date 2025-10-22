@@ -85,9 +85,10 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        std::string, r,
+                                        int        , r,
+                                        int        , s,
                                         std::string, parity,
-                                        std::string, eta);
+                                        int        , eta);
     };
     typedef Correlator<Metadata, Complex> Result;
 
@@ -231,9 +232,9 @@ void TDMixingTopC<FImpl>::execute(void)
             for (const auto r : {OpStruct::One,OpStruct::Two})
             {
                 Result res;
-                res.info.parity = (p == Parity::Pos) ? "+" : "-";
-                res.info.eta = std::to_string(i);
-                res.info.r = std::to_string(r + 1);
+                res.info.parity = DMixingUtils<FImpl>::toString(p);
+                res.info.r      = DMixingUtils<FImpl>::toInt(r);
+                res.info.eta    = i;
 
                 res.corr = contract_C_half(qcl, qul_adj, GdsG[r]);
                 result.push_back(res);

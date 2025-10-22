@@ -54,10 +54,13 @@ public:
         One=0,
         Two=1
     };
+    static int toInt(OpStruct r);
     enum Parity {
         Pos=0,
         Neg=1
     };
+    static std::string toString(Parity p);
+
     static const std::array<Gamma, 8> GHs;
     static const std::array<Gamma, 2> parityG;
     static void GH_cap(
@@ -70,6 +73,17 @@ public:
         const Parity p,
         const OpStruct r);
 };
+
+
+template <typename FImpl>
+int DMixingUtils<FImpl>::toInt(OpStruct r) {
+    if (r == OpStruct::One)
+        return 1;
+    else if (r == OpStruct::Two)
+        return 2;
+    else
+        HADRONS_ERROR(Argument, "DMixingUtils: Invalid OpStruct value");
+}
 
 template <typename FImpl>
 const std::array<Gamma, 8> DMixingUtils<FImpl>::GHs = {
@@ -88,6 +102,17 @@ const std::array<Gamma, 2> DMixingUtils<FImpl>::parityG = {
     Gamma(Gamma::Algebra::Identity),
     Gamma(Gamma::Algebra::Gamma5)
 };
+
+template <typename FImpl>
+std::string DMixingUtils<FImpl>::toString(Parity p) {
+    if (p == Parity::Pos)
+        return "+";
+    else if (p == Parity::Neg)
+        return "-";
+    else
+        HADRONS_ERROR(Argument, "DMixingUtils: Invalid Parity value");
+}
+
 
 template <typename FImpl>
 void DMixingUtils<FImpl>::GH_cap(
