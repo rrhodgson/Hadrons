@@ -197,43 +197,6 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
 
     const bool same_r = (rR == rL);
 
-    // product of traces
-    auto tr_same = [&](const auto &trA, const auto &trB)
-    {
-        for (const auto &GH2 : GHs)
-        {
-            startTimer("trace");
-            LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
-            stopTimer("trace");
-
-            startTimer("sliceSum");
-            sliceSum(tmp, buf, Tp);
-            stopTimer("sliceSum");
-
-            auto &row = corr[t1];
-            for (int t2 = 0; t2 < Nt; t2++)
-                row[t2] += TensorRemove(buf[t2]);
-        }
-    };
-    // trace of product
-    auto tr_diff = [&](const auto &trA, const auto &trB)
-    {
-        for (const auto &GH2 : GHs)
-        {
-            startTimer("trace");
-            LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
-            stopTimer("trace");
-
-            startTimer("sliceSum");
-            sliceSum(tmp, buf, Tp);
-            stopTimer("sliceSum");
-
-            auto &row = corr[t1];
-            for (int t2 = 0; t2 < Nt; t2++)
-                row[t2] += TensorRemove(buf[t2]);
-        }
-    };
-
     for (int t1 = 0; t1 < Nt; t1++)
     {
         const PropagatorField &ds = *ds_prop_pt[t1];
@@ -241,6 +204,44 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
 
         const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
         const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
+
+
+        // product of traces
+        auto tr_same = [&](const auto &trA, const auto &trB)
+        {
+            for (const auto &GH2 : GHs)
+            {
+                startTimer("trace");
+                LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
+                stopTimer("trace");
+
+                startTimer("sliceSum");
+                sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
+                auto &row = corr[t1];
+                for (int t2 = 0; t2 < Nt; t2++)
+                    row[t2] += TensorRemove(buf[t2]);
+            }
+        };
+        // trace of product
+        auto tr_diff = [&](const auto &trA, const auto &trB)
+        {
+            for (const auto &GH2 : GHs)
+            {
+                startTimer("trace");
+                LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
+                stopTimer("trace");
+
+                startTimer("sliceSum");
+                sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
+                auto &row = corr[t1];
+                for (int t2 = 0; t2 < Nt; t2++)
+                    row[t2] += TensorRemove(buf[t2]);
+            }
+        };
 
         switch (rL)
         {
