@@ -199,12 +199,13 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
+        startTimer("mult");
         const PropagatorField &ds = *ds_prop_pt[t1];
         const PropagatorField dsD = g5 * adj(ds) * g5;
 
         const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
         const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
-
+        stopTimer("mult");
 
         // product of traces
         auto tr_same = [&](const auto &trA, const auto &trB)
@@ -248,10 +249,10 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
             case OpStruct::One:
                 for (const auto &GH1 : GHs)
                 {
-                    startTimer("trA & trB");
+                    startTimer("mult");
                     PropagatorField trA = ds * parity * GH1 * cui;
                     PropagatorField trB = cuf * GH1 * dsD;
-                    stopTimer("trA & trB");
+                    stopTimer("mult");
                     same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
                 }
                 break;
@@ -259,10 +260,10 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
             case OpStruct::Two:
                 for (const auto &GH1 : GHs)
                 {
-                    startTimer("trA & trB");
+                    startTimer("mult");
                     PropagatorField trA = cuf * GH1 * cui;
                     PropagatorField trB = ds * parity * GH1 * dsD;
-                    stopTimer("trA & trB");
+                    stopTimer("mult");
                     same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
                 }
                 break;

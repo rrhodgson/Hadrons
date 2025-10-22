@@ -181,16 +181,24 @@ std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
+        startTimer("peekSite");
         const auto A = peekSite(GcuG_l, *xs[t1]);
+        stopTimer("peekSite");
 
+        startTimer("mult");
         const auto &ds = *ds_prop_pt[t1];
         const auto dsD = g5 * adj(ds) * g5;
-
         PropagatorField tmp = dsD * GcuG_r * ds;
-        sliceSum(tmp, B, Tp);
+        stopTimer("mult");
 
+        startTimer("sliceSum");
+        sliceSum(tmp, B, Tp);
+        stopTimer("sliceSum");
+
+        startTimer("trace");
         for (int t2 = 0; t2 < Nt; t2++)
             corr[t1][t2] = TensorRemove(trace(A * B[t2]));
+        stopTimer("trace");
     }
 
     return corr;
@@ -214,7 +222,7 @@ void TDMixingTopA<FImpl>::setup(void)
 template <typename FImpl>
 void TDMixingTopA<FImpl>::execute(void)
 {
-    LOG(Message) << "Computing D-meson mixing diagram, topology D" << std::endl;
+    LOG(Message) << "Computing D-meson mixing diagram, topology A" << std::endl;
     LOG(Message) << "qULeft  : " << par().qULeft << std::endl;
     LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
     LOG(Message) << "qURight : " << par().qURight << std::endl;
@@ -265,9 +273,7 @@ void TDMixingTopA<FImpl>::execute(void)
                 res.info.r      = DMixingUtils<FImpl>::toInt(r);
                 res.info.s      = DMixingUtils<FImpl>::toInt(s);
 
-                startTimer("contract_A");
                 res.corr = contract_A(half_l, half_r, pts, qin);
-                stopTimer("contract_A");
 
                 result.push_back(res);
             }

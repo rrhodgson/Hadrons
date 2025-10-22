@@ -183,9 +183,14 @@ typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_h
     const PropagatorField &prop_u_adj,
     const PropagatorField &loop)
 {
+    startTimer("mult");
     PropagatorField tmp = prop_u_adj * loop * prop_c;
+    stopTimer("mult");
+
     SlicedPropagator out;
+    startTimer("sliceSum");
     sliceSum(tmp, out, Tp);
+    stopTimer("sliceSum");
     return out;
 };
 
@@ -199,6 +204,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
     int Nt = env().getDim(Tdir);
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
 
+    startTimer("trace");
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
@@ -206,6 +212,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
             corr[t1][t2] = TensorRemove(trace(half_l[t1] * g5 * half_r[t2] * g5));
         }
     }
+    stopTimer("trace");
 
     return corr;
 };
@@ -283,10 +290,8 @@ void TDMixingTopD<FImpl>::execute(void)
             stopTimer("GH_cap");
             for (const auto r : {OpStruct::One,OpStruct::Two})
             {
-                startTimer("contract_D_half");
                 half_l[half_idx(r,i,Neta)] = contract_D_half(qcl, qur_adj, GdsG[r]);
                 half_r[half_idx(r,i,Neta)] = contract_D_half(qcr, qul_adj, GdsG[r]);
-                stopTimer("contract_D_half");
             }
         }
 
@@ -315,16 +320,12 @@ void TDMixingTopD<FImpl>::execute(void)
                         Lsum[t] += Li[t];
                         Rsum[t] += Ri[t];
                     }
-                    startTimer("contract_D");
                     tmpSum = contract_D(Lsum, Rsum);
-                    stopTimer("contract_D");
 
                     if (same_loop_noise)
                     {
                         // accumulate sum of diagonal terms & remove from total
-                        startTimer("contract_D");
                         const auto diag = contract_D(Li, Ri);
-                        stopTimer("contract_D");
                         for (int t1 = 0; t1 < Nt; t1++)
                             for (int t2 = 0; t2 < Nt; t2++)
                             {
