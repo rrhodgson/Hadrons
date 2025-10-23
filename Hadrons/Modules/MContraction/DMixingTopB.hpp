@@ -212,9 +212,9 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH2 : GHs)
             {
-                startTimer("trace");
+                startTimer("2 trace");
                 LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
-                stopTimer("trace");
+                stopTimer("2 trace");
 
                 startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
@@ -230,9 +230,9 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH2 : GHs)
             {
-                startTimer("trace");
+                startTimer("1 trace");
                 LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
-                stopTimer("trace");
+                stopTimer("1 trace");
 
                 startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
