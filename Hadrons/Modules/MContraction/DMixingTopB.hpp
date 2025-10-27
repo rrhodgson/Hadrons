@@ -92,10 +92,17 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        std::string, rr,
+                                        int        , r,
+                                        int        , s,
                                         std::string, parity);
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
+
+    using Parity   = typename DMixingUtils<FImpl>::Parity;
+    using OpStruct = typename DMixingUtils<FImpl>::OpStruct;
+
+    const std::array<Gamma,8> &GHs     = DMixingUtils<FImpl>::GHs;
+    const std::array<Gamma,2> &parityG = DMixingUtils<FImpl>::parityG;
 
 public:
     // constructor
@@ -118,9 +125,9 @@ public:
         const PropagatorField &uf,
         const std::vector<PropagatorField *> &ds_prop_pt,
         const std::vector<Coordinate *> &xs,
-        const int p,
-        const int rL,
-        const int rR);
+        const Parity p,
+        const OpStruct rL,
+        const OpStruct rR);
 };
 
 MODULE_REGISTER_TMP(DMixingTopB, TDMixingTopB<FIMPL>, MContraction);
@@ -169,44 +176,50 @@ std::vector<std::string> TDMixingTopB<FImpl>::getOutputFiles(void)
 
 template <typename FImpl>
 std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
-    const TDMixingTopB<FImpl>::PropagatorField &ci,
-    const TDMixingTopB<FImpl>::PropagatorField &ui,
-    const TDMixingTopB<FImpl>::PropagatorField &cf,
-    const TDMixingTopB<FImpl>::PropagatorField &uf,
-    const std::vector<typename TDMixingTopB<FImpl>::PropagatorField *> &ds_prop_pt,
+    const PropagatorField &ci,
+    const PropagatorField &ui,
+    const PropagatorField &cf,
+    const PropagatorField &uf,
+    const std::vector<PropagatorField *> &ds_prop_pt,
     const std::vector<Coordinate *> &xs,
-    const int p,
-    const int rL,
-    const int rR)
+    const Parity p,
+    const OpStruct rL,
+    const OpStruct rR)
 {
-    int Nt = ci.Grid()->_fdimensions[3];
+    int Nt = env().getDim(Tdir);
     Gamma g5(Gamma::Algebra::Gamma5);
 
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt, 0.));
     std::vector<TComplex> buf;
     buf.reserve(Nt);
 
-    const auto &GHs = DMixingUtils<FImpl>::GHs;
-    const auto &GHpar = DMixingUtils<FImpl>::parityG;
-    const Gamma parity = GHpar[p];
+    const Gamma parity = parityG[p];
 
     const bool same_r = (rR == rL);
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
+        startTimer("mult");
         const PropagatorField &ds = *ds_prop_pt[t1];
         const PropagatorField dsD = g5 * adj(ds) * g5;
 
         const PropagatorField cui = peekSite(ci, *xs[t1]) * adj(ui) * g5;
         const PropagatorField cuf = cf * adj(peekSite(uf, *xs[t1])) * g5;
+        stopTimer("mult");
 
         // product of traces
         auto tr_same = [&](const auto &trA, const auto &trB)
         {
             for (const auto &GH2 : GHs)
             {
+                startTimer("2 trace");
                 LatticeComplex tmp = trace(trA * GH2) * trace(trB * parity * GH2);
+                stopTimer("2 trace");
+
+                startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
                 auto &row = corr[t1];
                 for (int t2 = 0; t2 < Nt; t2++)
                     row[t2] += TensorRemove(buf[t2]);
@@ -217,31 +230,46 @@ std::vector<std::vector<Complex>> TDMixingTopB<FImpl>::contract_B(
         {
             for (const auto &GH2 : GHs)
             {
+                startTimer("1 trace");
                 LatticeComplex tmp = trace(trA * GH2 * trB * parity * GH2);
+                stopTimer("1 trace");
+
+                startTimer("sliceSum");
                 sliceSum(tmp, buf, Tp);
+                stopTimer("sliceSum");
+
                 auto &row = corr[t1];
                 for (int t2 = 0; t2 < Nt; t2++)
                     row[t2] += TensorRemove(buf[t2]);
             }
         };
 
-        if (rL == 0)
+        switch (rL)
         {
-            for (const auto &GH1 : GHs)
-            {
-                PropagatorField trA = ds * parity * GH1 * cui;
-                PropagatorField trB = cuf * GH1 * dsD;
-                same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
-            }
-        }
-        else
-        {
-            for (const auto &GH1 : GHs)
-            {
-                PropagatorField trA = cuf * GH1 * cui;
-                PropagatorField trB = ds * parity * GH1 * dsD;
-                same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
-            }
+            case OpStruct::One:
+                for (const auto &GH1 : GHs)
+                {
+                    startTimer("mult");
+                    PropagatorField trA = ds * parity * GH1 * cui;
+                    PropagatorField trB = cuf * GH1 * dsD;
+                    stopTimer("mult");
+                    same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
+                }
+                break;
+
+            case OpStruct::Two:
+                for (const auto &GH1 : GHs)
+                {
+                    startTimer("mult");
+                    PropagatorField trA = cuf * GH1 * cui;
+                    PropagatorField trB = ds * parity * GH1 * dsD;
+                    stopTimer("mult");
+                    same_r ? tr_same(trA, trB) : tr_diff(trA, trB);
+                }
+                break;
+
+            default:
+                HADRONS_ERROR(Argument, "DMixingTopB: Invalid OpStruct value");
         }
     }
 
@@ -276,15 +304,16 @@ void TDMixingTopB<FImpl>::execute(void)
     auto &qin = envGet(std::vector<PropagatorField *>, par().qInt);
     auto &pts = envGet(std::vector<Coordinate *>, par().points);
 
-    for (int p = 0; p < 2; p++)
+    for (const auto p : {Parity::Pos,Parity::Neg})
     {
-        for (int r = 0; r < 2; r++)
+        for (const auto r : {OpStruct::One,OpStruct::Two})
         {
-            for (int s = 0; s < 2; s++)
+            for (const auto s : {OpStruct::One,OpStruct::Two})
             {
                 Result res;
-                res.info.parity = (p == 0) ? "+" : "-";
-                res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
+                res.info.parity = DMixingUtils<FImpl>::toString(p);
+                res.info.r      = DMixingUtils<FImpl>::toInt(r);
+                res.info.s      = DMixingUtils<FImpl>::toInt(s);
 
                 res.corr = contract_B(qcl, qul, qcr, qur, qin, pts, p, r, s);
                 result.push_back(res);

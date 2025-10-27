@@ -92,11 +92,18 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        std::string, rr,
+                                        int        , r,
+                                        int        , s,
                                         std::string, parity,
-                                        std::string, eta_max);
+                                        int        , eta_max);
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
+
+    using Parity   = typename DMixingUtils<FImpl>::Parity;
+    using OpStruct = typename DMixingUtils<FImpl>::OpStruct;
+
+    const std::array<Gamma,8> &GHs     = DMixingUtils<FImpl>::GHs;
+    const std::array<Gamma,2> &parityG = DMixingUtils<FImpl>::parityG;
 
 public:
     // constructor
@@ -119,6 +126,10 @@ public:
     virtual std::vector<std::vector<Complex>> contract_D(
         const SlicedPropagator &half_if,
         const SlicedPropagator &half_fi);
+
+    int half_idx(OpStruct r, int i, int Neta) {
+        return i + Neta * r;
+    }
 };
 
 MODULE_REGISTER_TMP(DMixingTopD, TDMixingTopD<FIMPL>, MContraction);
@@ -168,26 +179,32 @@ std::vector<std::string> TDMixingTopD<FImpl>::getOutputFiles(void)
 
 template <typename FImpl>
 typename TDMixingTopD<FImpl>::SlicedPropagator TDMixingTopD<FImpl>::contract_D_half(
-    const TDMixingTopD<FImpl>::PropagatorField &prop_c,
-    const TDMixingTopD<FImpl>::PropagatorField &prop_u_adj,
-    const TDMixingTopD<FImpl>::PropagatorField &loop)
+    const PropagatorField &prop_c,
+    const PropagatorField &prop_u_adj,
+    const PropagatorField &loop)
 {
+    startTimer("mult");
     PropagatorField tmp = prop_u_adj * loop * prop_c;
+    stopTimer("mult");
+
     SlicedPropagator out;
+    startTimer("sliceSum");
     sliceSum(tmp, out, Tp);
+    stopTimer("sliceSum");
     return out;
 };
 
 template <typename FImpl>
 std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
-    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_l,
-    const typename TDMixingTopD<FImpl>::SlicedPropagator &half_r)
+    const SlicedPropagator &half_l,
+    const SlicedPropagator &half_r)
 {
     Gamma g5(Gamma::Algebra::Gamma5);
 
-    int Nt = half_l.size();
+    int Nt = env().getDim(Tdir);
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
 
+    startTimer("trace");
     for (int t1 = 0; t1 < Nt; t1++)
     {
         for (int t2 = 0; t2 < Nt; t2++)
@@ -195,6 +212,7 @@ std::vector<std::vector<Complex>> TDMixingTopD<FImpl>::contract_D(
             corr[t1][t2] = TensorRemove(trace(half_l[t1] * g5 * half_r[t2] * g5));
         }
     }
+    stopTimer("trace");
 
     return corr;
 };
@@ -236,7 +254,6 @@ void TDMixingTopD<FImpl>::execute(void)
     std::vector<Result> result;
 
     const int Nt{env().getDim(Tdir)};
-    GridCartesian *grid = envGetGrid(FermionField);
 
     auto &qul = envGet(PropagatorField, par().qULeft);
     auto &qcl = envGet(PropagatorField, par().qCLeft);
@@ -263,22 +280,24 @@ void TDMixingTopD<FImpl>::execute(void)
 
     SlicedPropagator Lsum(Nt), Rsum(Nt);
 
-    for (int p = 0; p < 2; p++)
+    for (const auto p : {Parity::Pos,Parity::Neg})
     {
         for (int i = 0; i < Neta; i++)
         {
             // here one has to add ql2 if one wants them to be allowed to be different
+            startTimer("GH_cap");
             DMixingUtils<FImpl>::GH_cap(GdsG, *ql1[i], p);
-            for (int r = 0; r < 2; r++)
+            stopTimer("GH_cap");
+            for (const auto r : {OpStruct::One,OpStruct::Two})
             {
-                half_l[i + Neta * r] = contract_D_half(qcl, qur_adj, GdsG[r]);
-                half_r[i + Neta * r] = contract_D_half(qcr, qul_adj, GdsG[r]);
+                half_l[half_idx(r,i,Neta)] = contract_D_half(qcl, qur_adj, GdsG[r]);
+                half_r[half_idx(r,i,Neta)] = contract_D_half(qcr, qul_adj, GdsG[r]);
             }
         }
 
-        for (int r = 0; r < 2; r++)
+        for (const auto r : {OpStruct::One,OpStruct::Two})
         {
-            for (int s = 0; s < 2; s++)
+            for (const auto s : {OpStruct::One,OpStruct::Two})
             {
                 for (int t = 0; t < Nt; t++)
                 {
@@ -288,10 +307,12 @@ void TDMixingTopD<FImpl>::execute(void)
                         std::fill(diagSum[t].begin(), diagSum[t].end(), Complex(0.0));
                 }
 
-                for (int i = 0; i < Neta; i++) // imax = i + 1
+                for (int i = 0; i < Neta; i++)
                 {
-                    const auto &Li = half_l[i + Neta * r];
-                    const auto &Ri = half_r[i + Neta * s];
+                    int eta_max = i + 1;
+
+                    const auto &Li = half_l[half_idx(r,i,Neta)];
+                    const auto &Ri = half_r[half_idx(s,i,Neta)];
 
                     // accumulate sums of Li, Ri
                     for (int t = 0; t < Nt; t++)
@@ -304,7 +325,7 @@ void TDMixingTopD<FImpl>::execute(void)
                     if (same_loop_noise)
                     {
                         // accumulate sum of diagonal terms & remove from total
-                        const auto &diag = contract_D(Li, Ri);
+                        const auto diag = contract_D(Li, Ri);
                         for (int t1 = 0; t1 < Nt; t1++)
                             for (int t2 = 0; t2 < Nt; t2++)
                             {
@@ -322,9 +343,11 @@ void TDMixingTopD<FImpl>::execute(void)
                             tmpRes[t1][t2] = tmpSum[t1][t2] / norm;
 
                     Result res;
-                    res.info.parity = (p == 0) ? "+" : "-";
-                    res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
-                    res.info.eta_max = std::to_string(i + 1);
+                    res.info.parity  = DMixingUtils<FImpl>::toString(p);
+                    res.info.r       = DMixingUtils<FImpl>::toInt(r);
+                    res.info.s       = DMixingUtils<FImpl>::toInt(s);
+                    res.info.eta_max = eta_max;
+                    
                     res.corr = tmpRes;
                     result.push_back(res);
                 }

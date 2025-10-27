@@ -92,10 +92,17 @@ public:
     {
     public:
         GRID_SERIALIZABLE_CLASS_MEMBERS(Metadata,
-                                        std::string, rr,
+                                        int        , r,
+                                        int        , s,
                                         std::string, parity);
     };
     typedef Correlator<Metadata, std::vector<Complex>> Result;
+
+    using Parity   = typename DMixingUtils<FImpl>::Parity;
+    using OpStruct = typename DMixingUtils<FImpl>::OpStruct;
+
+    const std::array<Gamma,8> &GHs     = DMixingUtils<FImpl>::GHs;
+    const std::array<Gamma,2> &parityG = DMixingUtils<FImpl>::parityG;
 
 public:
     // constructor
@@ -160,12 +167,12 @@ std::vector<std::string> TDMixingTopA<FImpl>::getOutputFiles(void)
 
 template <typename FImpl>
 std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
-    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_l,
-    const typename TDMixingTopA<FImpl>::PropagatorField &GcuG_r,
+    const PropagatorField &GcuG_l,
+    const PropagatorField &GcuG_r,
     const std::vector<Coordinate *> &xs,
-    const std::vector<typename TDMixingTopA<FImpl>::PropagatorField *> &ds_prop_pt)
+    const std::vector<PropagatorField *> &ds_prop_pt)
 {
-    int Nt = GcuG_l.Grid()->_fdimensions[3];
+    int Nt = env().getDim(Tdir);
     Gamma g5(Gamma::Algebra::Gamma5);
     std::vector<std::vector<Complex>> corr(Nt, std::vector<Complex>(Nt));
 
@@ -174,16 +181,24 @@ std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
 
     for (int t1 = 0; t1 < Nt; t1++)
     {
+        startTimer("peekSite");
         const auto A = peekSite(GcuG_l, *xs[t1]);
+        stopTimer("peekSite");
 
+        startTimer("mult");
         const auto &ds = *ds_prop_pt[t1];
         const auto dsD = g5 * adj(ds) * g5;
-
         PropagatorField tmp = dsD * GcuG_r * ds;
-        sliceSum(tmp, B, Tp);
+        stopTimer("mult");
 
+        startTimer("sliceSum");
+        sliceSum(tmp, B, Tp);
+        stopTimer("sliceSum");
+
+        startTimer("trace");
         for (int t2 = 0; t2 < Nt; t2++)
             corr[t1][t2] = TensorRemove(trace(A * B[t2]));
+        stopTimer("trace");
     }
 
     return corr;
@@ -207,7 +222,7 @@ void TDMixingTopA<FImpl>::setup(void)
 template <typename FImpl>
 void TDMixingTopA<FImpl>::execute(void)
 {
-    LOG(Message) << "Computing D-meson mixing diagram, topology D" << std::endl;
+    LOG(Message) << "Computing D-meson mixing diagram, topology A" << std::endl;
     LOG(Message) << "qULeft  : " << par().qULeft << std::endl;
     LOG(Message) << "qCLeft  : " << par().qCLeft << std::endl;
     LOG(Message) << "qURight : " << par().qURight << std::endl;
@@ -218,7 +233,6 @@ void TDMixingTopA<FImpl>::execute(void)
     std::vector<Result> result;
 
     const int Nt{env().getDim(Tdir)};
-    GridCartesian *grid = envGetGrid(FermionField);
 
     auto &qul = envGet(PropagatorField, par().qULeft);
     auto &qcl = envGet(PropagatorField, par().qCLeft);
@@ -239,27 +253,28 @@ void TDMixingTopA<FImpl>::execute(void)
     qcul = qcl * adj(qul) * g5; // qcl * g5 * (g5 * adj(qul) * g5)
     qcur = qcr * adj(qur) * g5; // qcr * g5 * (g5 * adj(qur) * g5)
 
-    // parity +, parity -  (multiplying from left)
-    const auto &GHpar = DMixingUtils<FImpl>::parityG;
+    startTimer("GH_cap");
+    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, Parity::Pos);
+    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, Parity::Pos);
+    stopTimer("GH_cap");
 
-    DMixingUtils<FImpl>::GH_cap(GcuG_l, qcul, 0);
-    DMixingUtils<FImpl>::GH_cap(GcuG_r, qcur, 0);
-
-    for (int p = 0; p < 2; p++)
+    for (const auto p : {Parity::Pos,Parity::Neg})
     {
-        for (int r = 0; r < 2; r++)
+        for (const auto r : {OpStruct::One,OpStruct::Two})
         {
-            half_l = GHpar[p] * GcuG_l[r];
+            half_l = parityG[p] * GcuG_l[r];
 
-            for (int s = 0; s < 2; s++)
+            for (const auto s : {OpStruct::One,OpStruct::Two})
             {
-                half_r = GHpar[p] * GcuG_r[s];
+                half_r = parityG[p] * GcuG_r[s];
 
                 Result res;
-                res.info.parity = (p == 0) ? "+" : "-";
-                res.info.rr = std::to_string(r + 1) + std::to_string(s + 1);
+                res.info.parity = DMixingUtils<FImpl>::toString(p);
+                res.info.r      = DMixingUtils<FImpl>::toInt(r);
+                res.info.s      = DMixingUtils<FImpl>::toInt(s);
 
                 res.corr = contract_A(half_l, half_r, pts, qin);
+
                 result.push_back(res);
             }
         }
