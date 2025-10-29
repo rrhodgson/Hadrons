@@ -186,8 +186,8 @@ std::vector<std::vector<Complex>> TDMixingTopA<FImpl>::contract_A(
         stopTimer("peekSite");
 
         startTimer("mult");
-        const auto &ds = *ds_prop_pt[t1];
-        const auto dsD = g5 * adj(ds) * g5;
+        const PropagatorField &ds = *ds_prop_pt[t1];
+        const PropagatorField dsD = g5 * adj(ds) * g5;
         PropagatorField tmp = dsD * GcuG_r * ds;
         stopTimer("mult");
 
