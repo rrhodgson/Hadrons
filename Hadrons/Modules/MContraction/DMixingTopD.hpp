@@ -250,7 +250,7 @@ void TDMixingTopD<FImpl>::execute(void)
     LOG(Message) << "qURight : " << par().qURight << std::endl;
     LOG(Message) << "qCRight : " << par().qCRight << std::endl;
     bool qLoop1_empty = par().qLoop1.empty();
-    bool qLoop2_empty = par().qLoop1.empty();
+    bool qLoop2_empty = par().qLoop2.empty();
     if (qLoop1_empty)
         LOG(Message) << "Empty qLoop1 : (Pseudo)Scalar bilinear" << std::endl;
     else
