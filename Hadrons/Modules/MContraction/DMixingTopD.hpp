@@ -152,9 +152,9 @@ std::vector<std::string> TDMixingTopD<FImpl>::getInput(void)
                                    par().qCLeft,
                                    par().qURight,
                                    par().qCRight};
-    if ( !par().qLoop1.empty() )
+    if (!par().qLoop1.empty())
         in.push_back(par().qLoop1);
-    if ( !par().qLoop2.empty() )
+    if (!par().qLoop2.empty())
         in.push_back(par().qLoop2);
 
     return in;
@@ -250,12 +250,12 @@ void TDMixingTopD<FImpl>::execute(void)
     LOG(Message) << "qURight : " << par().qURight << std::endl;
     LOG(Message) << "qCRight : " << par().qCRight << std::endl;
     bool qLoop1_empty = par().qLoop1.empty();
-    bool qLoop2_empty = par().qLoop2.empty();
-    if (par().qLoop1.empty())
+    bool qLoop2_empty = par().qLoop1.empty();
+    if (qLoop1_empty)
         LOG(Message) << "Empty qLoop1 : (Pseudo)Scalar bilinear" << std::endl;
     else
         LOG(Message) << "qLoop1  : " << par().qLoop1 << std::endl;
-    if (par().qLoop2.empty())
+    if (qLoop2_empty)
         LOG(Message) << "Empty qLoop2 : (Pseudo)Scalar bilinear" << std::endl;
     else
         LOG(Message) << "qLoop2  : " << par().qLoop2 << std::endl;
@@ -271,9 +271,9 @@ void TDMixingTopD<FImpl>::execute(void)
     auto &qcl = envGet(PropagatorField, par().qCLeft);
     auto &qur = envGet(PropagatorField, par().qURight);
     auto &qcr = envGet(PropagatorField, par().qCRight);
-    auto &ql1 = (par().qLoop1.empty())  ? ql_default
+    auto &ql1 = (qLoop1_empty)  ? ql_default
                                         : envGet(std::vector<PropagatorField *>, par().qLoop1);
-    auto &ql2 = (par().qLoop2.empty())  ? ql_default
+    auto &ql2 = (qLoop2_empty)  ? ql_default
                                         : envGet(std::vector<PropagatorField *>, par().qLoop2);
 
     PropagatorField Unit(grid); Unit = 1;
@@ -282,7 +282,7 @@ void TDMixingTopD<FImpl>::execute(void)
     const PropagatorField qur_adj = g5 * adj(qur) * g5;
     const PropagatorField qul_adj = g5 * adj(qul) * g5;
 
-    bool same_loop_noise = (par().qLoop1 == par().qLoop2) and !par().qLoop1.empty() and !par().qLoop2.empty();
+    bool same_loop_noise = (par().qLoop1 == par().qLoop2) and !qLoop1_empty and !qLoop2_empty;
     int Neta1 = ql1.size();
     int Neta2 = ql2.size();
 
@@ -298,10 +298,10 @@ void TDMixingTopD<FImpl>::execute(void)
     SlicedPropagator Lsum(Nt), Rsum(Nt);
 
     std::vector<OpStruct> r_vals;
-    if (par().qLoop1.empty()) r_vals = {OpStruct::Two};
+    if (qLoop1_empty) r_vals = {OpStruct::Two};
     else                      r_vals = {OpStruct::One,OpStruct::Two};
     std::vector<OpStruct> s_vals;
-    if (par().qLoop2.empty()) s_vals = {OpStruct::Two};
+    if (qLoop2_empty) s_vals = {OpStruct::Two};
     else                      s_vals = {OpStruct::One,OpStruct::Two};
 
     for (const auto p : {Parity::Pos,Parity::Neg})
@@ -310,7 +310,7 @@ void TDMixingTopD<FImpl>::execute(void)
         {
             if (i < Neta1) {
                 startTimer("GH_cap");
-                if (par().qLoop1.empty()) {
+                if (qLoop1_empty) {
                     GdsG1[OpStruct::One] = Unit * parityG[p];
                     GdsG1[OpStruct::Two] = Unit * parityG[p];
                 } else {
@@ -321,14 +321,18 @@ void TDMixingTopD<FImpl>::execute(void)
                     half_l[half_idx(r,i,Neta1)] = contract_D_half(qcl, qur_adj, GdsG1[r]);
             }
             if (i < Neta2) {
-                startTimer("GH_cap");
-                if (par().qLoop2.empty()) {
-                    GdsG2[OpStruct::One] = Unit * parityG[p];
-                    GdsG2[OpStruct::Two] = Unit * parityG[p];
+                if (same_loop_noise) {
+                    GdsG2 = GdsG1;
                 } else {
-                    DMixingUtils<FImpl>::GH_cap(GdsG2, *ql2[i], p);
+                    startTimer("GH_cap");
+                    if (qLoop2_empty) {
+                        GdsG2[OpStruct::One] = Unit * parityG[p];
+                        GdsG2[OpStruct::Two] = Unit * parityG[p];
+                    } else {
+                        DMixingUtils<FImpl>::GH_cap(GdsG2, *ql2[i], p);
+                    }
+                    stopTimer("GH_cap");
                 }
-                stopTimer("GH_cap");
                 for (const auto s : s_vals)
                     half_r[half_idx(s,i,Neta2)] = contract_D_half(qcr, qul_adj, GdsG2[s]);
             }
