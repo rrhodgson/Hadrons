@@ -30,6 +30,7 @@
 #define Hadrons_Environment_hpp_
 
 #include <Hadrons/Global.hpp>
+#include <Hadrons/Random.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -75,6 +76,7 @@ public:
     typedef std::unique_ptr<GridRedBlackCartesian> GridRbPt;
     typedef std::unique_ptr<GridParallelRNG>       RngPt;
     typedef std::unique_ptr<GridSerialRNG>         SerialRngPt;
+    typedef std::unique_ptr<HadronsSerialRNG>      HadronsSerialRngPt;
     GRID_SERIALIZABLE_ENUM(Storage, undef, standard, 0, cache, 1, temporary, 2);
 private:
     struct ObjInfo
@@ -92,6 +94,7 @@ private:
     typedef std::pair<size_t, std::vector<int>> CoarseGridKey;
 public:
     // grids
+    Coordinate simdDecomposition(const unsigned int nd, const unsigned int nSimd);
     template <typename VType = vComplex>
     void                    createGrid(const unsigned int Ls);
     template <typename VType = vComplex>
@@ -121,6 +124,7 @@ public:
     // random number generator
     GridParallelRNG *       get4dRng(void);
     GridSerialRNG *         getSerialRng(void);
+    HadronsSerialRNG *      getHadronsSerialRng(void);
     // general memory management
     void                    addObject(const std::string name,
                                       const int moduleAddress = -1);
@@ -194,9 +198,10 @@ public:
 private:
     // general
     double                              vol_;
-    bool                                protect_{true};
+    bool                                protect_{true}, simdReverse_{false};
     // grids
     std::vector<int>                    dim_;
+    std::vector<bool>                   simdMask_;
     std::map<FineGridKey, GridPt>       grid3d_;
     std::map<FineGridKey, GridPt>       grid4d_;
     std::map<FineGridKey, GridPt>       grid5d_;
@@ -208,6 +213,7 @@ private:
     // random number generator
     RngPt                               rng4d_{nullptr};
     SerialRngPt                         rngSerial_{nullptr};
+    HadronsSerialRngPt                  rngSerialHadrons_{nullptr};
     // object store
     std::vector<ObjInfo>                object_;
     std::map<std::string, unsigned int> objectAddress_;
@@ -251,7 +257,8 @@ LOG(Debug) << " - cb  : " << (__VA_ARGS__)->_isCheckerBoarded << std::endl;\
 LOG(Debug) << " - fdim: " << (__VA_ARGS__)->_fdimensions << std::endl;\
 LOG(Debug) << " - gdim: " << (__VA_ARGS__)->_gdimensions << std::endl;\
 LOG(Debug) << " - ldim: " << (__VA_ARGS__)->_ldimensions << std::endl;\
-LOG(Debug) << " - rdim: " << (__VA_ARGS__)->_rdimensions << std::endl;
+LOG(Debug) << " - rdim: " << (__VA_ARGS__)->_rdimensions << std::endl;\
+LOG(Debug) << " - SIMD: " << (__VA_ARGS__)->_simd_layout << std::endl;
 
 template <typename VType>
 void Environment::createGrid(const unsigned int Ls)
@@ -262,7 +269,7 @@ void Environment::createGrid(const unsigned int Ls)
     {
         grid4d_[{hash, 1}].reset(
             SpaceTimeGrid::makeFourDimGrid(getDim(), 
-                                        GridDefaultSimd(getNd(), VType::Nsimd()),
+                                        simdDecomposition(getNd(), VType::Nsimd()),
                                         GridDefaultMpi()));
         HADRONS_DUMP_GRID(grid4d_[{hash, 1}].get());
         gridRb4d_[{hash, 1}].reset(
@@ -325,7 +332,7 @@ void Environment::createCoarseGrid(const std::vector<int> &blockSize,
     {
         gridCoarse4d_[hkey4d].reset(
             SpaceTimeGrid::makeFourDimGrid(coarseDim, 
-                GridDefaultSimd(nd, VType::Nsimd()), GridDefaultMpi()));
+                simdDecomposition(nd, VType::Nsimd()), GridDefaultMpi()));
         HADRONS_DUMP_GRID(gridCoarse4d_[hkey4d].get());
     }
     if (gridCoarse5d_.find(hkey5d) == gridCoarse5d_.end())
@@ -347,7 +354,7 @@ void Environment::createSliceGrid(const unsigned int orthDim)
         int           nd         = static_cast<int>(g->_ndimension);
         unsigned int  hd         = 0;
         Coordinate    latt_size  = g->_gdimensions;
-        Coordinate    simd3      = GridDefaultSimd(nd - 1, VType::Nsimd());
+        Coordinate    simd3      = simdDecomposition(nd - 1, VType::Nsimd());
         Coordinate    simd;
         Coordinate    mpi        = g->_processors;
 

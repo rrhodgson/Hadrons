@@ -4,7 +4,7 @@
  * Copyright (C) 2015 - 2020
  *
  * Author: Antonin Portelli <antonin.portelli@me.com>
- * Author: Fionn O hOgain <fionn.o.hogain@ed.ac.uk>
+ * Author: Raoul Hodgson <raoul.hodgson@desy.de>
  *
  * Hadrons is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,8 +42,8 @@ class LinearCombPar: Serializable
 {
 public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(LinearCombPar,
-                                    std::vector<std::string>, q,
-                                    std::vector<double>,      a);
+                                    std::vector<std::string>, fields,
+                                    std::vector<double>,      coeffs);
 };
 
 template <typename FImpl>
@@ -80,7 +80,7 @@ TLinearComb<FImpl>::TLinearComb(const std::string name)
 template <typename FImpl>
 std::vector<std::string> TLinearComb<FImpl>::getInput(void)
 {
-    std::vector<std::string> in = par().q;
+    std::vector<std::string> in = par().fields;
     
     return in;
 }
@@ -104,19 +104,19 @@ void TLinearComb<FImpl>::setup(void)
 template <typename FImpl>
 void TLinearComb<FImpl>::execute(void)
 {
-    assert(par().q.size() == par().a.size());
+    assert(par().fields.size() == par().coeffs.size());
 
-    LOG(Message) << par().q << std::endl;
-    LOG(Message) << par().a << std::endl;
+    LOG(Message) << par().fields << std::endl;
+    LOG(Message) << par().coeffs << std::endl;
 
     auto &res  = envGet(PropagatorField, getName());
 
-    for (int i=0; i<par().q.size(); i++) {
-        auto &q = envGet(PropagatorField, par().q[i]);
+    for (int i=0; i<par().fields.size(); i++) {
+        auto &q = envGet(PropagatorField, par().fields[i]);
         if (i==0)
-            res = par().a[i]*q;
+            res = par().coeffs[i]*q;
         else
-            res += par().a[i]*q;
+            res += par().coeffs[i]*q;
         LOG(Message) << "Field[" << i << "] : Norm = " << norm2(q) << std::endl;  
     }
     LOG(Message) << std::endl;
