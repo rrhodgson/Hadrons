@@ -32,6 +32,7 @@
 #include <Hadrons/Global.hpp>
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
+#include <Hadrons/Serialization.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -100,15 +101,18 @@ std::vector<std::string> TSliced_Prop<FImpl>::getInput(void)
 template <typename FImpl>
 std::vector<std::string> TSliced_Prop<FImpl>::getOutput(void)
 {
-    std::vector<std::string> out = {};
+    std::vector<std::string> output = {getName()};
     
-    return out;
+    return output;
 }
 
 template <typename FImpl>
 std::vector<std::string> TSliced_Prop<FImpl>::getOutputFiles(void)
 {
-    std::vector<std::string> output = {resultFilename(par().output)};
+    std::vector<std::string> output;
+    
+    if (!par().output.empty())
+        output.push_back(resultFilename(par().output));
     
     return output;
 }
@@ -117,6 +121,7 @@ std::vector<std::string> TSliced_Prop<FImpl>::getOutputFiles(void)
 template <typename FImpl>
 void TSliced_Prop<FImpl>::setup(void)
 {
+    envCreate(HadronsSerializable, getName(), 1, 0);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -148,7 +153,11 @@ void TSliced_Prop<FImpl>::execute(void)
     }    
     result.push_back(r);
 
+    startTimer("I/O");
     saveResult(par().output, "Sliced_Prop", result);
+    stopTimer("I/O");
+    auto &out = envGet(HadronsSerializable, getName());
+    out = result;
 }
 
 END_MODULE_NAMESPACE
